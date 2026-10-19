@@ -1,6 +1,6 @@
 const User = require("../models/User");
 const Item = require("../models/Item");
-const bcrypt = require("bcrypt");
+const bcrypt = require('bcryptjs');
 const fs = require("fs");
 const path = require("path");
 
@@ -9,7 +9,7 @@ exports.getProfile = async (req, res) => {
   try {
     const userId = req.session.userId;
     const user = await User.findById(userId).select(
-      "-password -resetCode -resetCodeExpiry"
+      "-password -lockPassword -resetCode -resetCodeExpiry -resetPurpose"
     );
 
     if (!user) {

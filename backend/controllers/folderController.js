@@ -1,5 +1,5 @@
 const Item = require('../models/Item');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 
 // Lock folder with password
 exports.lockFolder = async (req, res) => {
@@ -26,6 +26,9 @@ exports.lockFolder = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     folder.password = hashedPassword;
+    // `isLocked` is the single source of truth for "this folder is in the
+    // vault / hidden from normal listings". The password gates ACCESS.
+    folder.isLocked = true;
     await folder.save();
 
     res.json({
@@ -73,10 +76,21 @@ exports.unlockFolder = async (req, res) => {
       });
     }
 
+    // Unlock the session — hide-or-show is driven by `isLocked`, so clear it.
+    // The password itself stays (it can be re-locked or verified again).
+    folder.isLocked = false;
+    await folder.save();
+
+    // Unlock succeeds — also return the contents so the client can render
+    // the folder immediately without a second round-trip.
+    const items = await Item.find({ parentFolder: id, userId }).sort({ createdAt: -1 });
+
     res.json({
       success: true,
       message: 'Folder unlocked successfully',
-      folder
+      folder,
+      items,
+      isLocked: false,
     });
   } catch (error) {
     console.error('Unlock folder error:', error);
@@ -152,11 +166,41 @@ exports.getFolderContents = async (req, res) => {
 
     const items = await Item.find({ parentFolder: id, userId }).sort({ createdAt: -1 });
 
+    // `isLocked` (not the mere presence of a password) decides whether the
+    // contents are gated — a session unlock clears the flag but keeps the
+    // password for re-verification.
+    const isLocked = !!folder.isLocked;
+
+    // A locked folder never leaks its contents: the client must first
+    // POST /folders/:id/unlock with the correct password.
+    // `?unlocked=true` lets the client re-fetch right after a successful
+    // unlock without being blocked again (the password itself stays).
+    const unlockedAgain = req.query.unlocked === 'true';
+    if (isLocked && !unlockedAgain) {
+      return res.json({
+        success: true,
+        folder: {
+          _id: folder._id,
+          name: folder.name,
+          type: folder.type,
+          createdAt: folder.createdAt,
+          updatedAt: folder.updatedAt,
+        },
+        items: null,
+        isLocked: true,
+      });
+    }
+
+    // Never send the password HASH to the client — expose a boolean instead.
+    const folderObj = folder.toObject();
+    delete folderObj.password;
+    folderObj.isLocked = false;
+
     res.json({
       success: true,
-      folder,
+      folder: folderObj,
       items,
-      isLocked: !!folder.password
+      isLocked: false,
     });
   } catch (error) {
     console.error('Get folder contents error:', error);

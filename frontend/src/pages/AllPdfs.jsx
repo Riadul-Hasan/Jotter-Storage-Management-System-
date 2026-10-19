@@ -1,152 +1,120 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-toastify';
-import { FaDownload } from 'react-icons/fa';
-import Header from '../components/Header';
-import BottomNav from '../components/BottomNav';
+import { FileText, Plus, Search, Download } from 'lucide-react';
+import PageShell from '../components/PageShell';
 import ItemCard from '../components/ItemCard';
+import useItemActions from '../hooks/useItemActions';
 import api from '../api/axios';
+import { cx, formatBytes, EASE } from '../utils/format';
+import { EmptyState, ListSkeleton } from '../components/Skeletons';
+import { CreateItemDialog } from '../components/Dialogs';
 
 const AllPdfs = () => {
-    const [items, setItems] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [selectedItem, setSelectedItem] = useState(null);
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
+  const [createOpen, setCreateOpen] = useState(false);
 
-    useEffect(() => {
-        fetchPdfs();
-    }, []);
-
-    const fetchPdfs = async () => {
-        try {
-            const res = await api.get('/items?type=pdf');
-            setItems(res.data.items);
-        } catch (e) {
-            toast.error('Failed to load PDFs');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleFavorite = async (item) => {
-        try {
-            await api.patch(`/items/${item._id}/favorite`);
-            fetchPdfs();
-        } catch (error) {
-            toast.error('Failed to update');
-        }
-    };
-
-    const handleDelete = async (item) => {
-        if (!window.confirm(`Delete "${item.name}"?`)) return;
-        try {
-            await api.delete(`/items/${item._id}`);
-            toast.success('Deleted');
-            fetchPdfs();
-        } catch (error) {
-            toast.error('Failed to delete');
-        }
-    };
-
-    const handleCopy = async (item) => {
-        try {
-            const textToCopy = `Name: ${item.name}\nType: PDF`;
-            await navigator.clipboard.writeText(textToCopy);
-            toast.success('Copied to clipboard!');
-        } catch (error) {
-            toast.error('Failed to copy');
-        }
-    };
-
-    // ✅ FIXED: Proper download handler for PDF
-    const handleDownload = async (item) => {
-        try {
-            const response = await fetch(`http://localhost:5000${item.filePath}`);
-            const blob = await response.blob();
-
-            const fileName = `${item.name}.pdf`;
-
-            // Create download link
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = fileName;
-            document.body.appendChild(link);
-            link.click();
-
-            // Cleanup
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(url);
-
-            toast.success('Download started!');
-        } catch (error) {
-            toast.error('Failed to download PDF');
-            console.error('Download error:', error);
-        }
-    };
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
-            </div>
-        );
+  const fetchPdfs = useCallback(async () => {
+    try {
+      const res = await api.get('/items?type=pdf');
+      setItems(res.data.items || []);
+    } catch {
+      toast.error('Could not load PDFs');
+    } finally {
+      setLoading(false);
     }
+  }, []);
 
-    return (
-        <div className="min-h-screen bg-gray-50 pb-20">
-            <Header title="PDFs" />
-            <div className="p-4 space-y-2">
-                {items.map(item => (
-                    <ItemCard
-                        key={item._id}
-                        item={item}
-                        onClick={() => setSelectedItem(item)}
-                        onFavorite={handleFavorite}
-                        onCopy={handleCopy}
-                        onRename={() => { }}
-                        onDuplicate={() => { }}
-                        onDelete={handleDelete}
-                        onShare={() => { }}
-                        onLock={() => { }}
-                    />
-                ))}
-                {items.length === 0 && (
-                    <p className="text-center text-gray-500 py-8">No PDFs yet</p>
-                )}
-            </div>
+  useEffect(() => { fetchPdfs(); }, [fetchPdfs]);
 
-            <BottomNav />
+  // Shared actions — re-fetches the grid after every mutation.
+  const { actions, dialogs } = useItemActions(fetchPdfs);
 
-            {/* View PDF Modal */}
-            {selectedItem && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-                        <div className="sticky top-0 bg-white border-b px-4 py-3 flex justify-between items-center">
-                            <h2 className="text-lg font-bold">{selectedItem.name}</h2>
-                            <button
-                                onClick={() => setSelectedItem(null)}
-                                className="text-gray-600 hover:text-gray-900 text-2xl"
-                            >
-                                ×
-                            </button>
-                        </div>
-                        <div className="p-4">
-                            <iframe
-                                src={`http://localhost:5000${selectedItem.filePath}`}
-                                className="w-full h-[600px] border rounded-lg"
-                                title={selectedItem.name}
-                            />
-                            <button
-                                onClick={() => handleDownload(selectedItem)}
-                                className="mt-4 w-full flex items-center gap-2 justify-center bg-black text-white py-2 px-4 rounded-lg hover:bg-gray-800"
-                            >
-                                <FaDownload /> Download PDF
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+  const createPdf = async ({ type, name, file }) => {
+    if (!file) { toast.error('Please choose a PDF'); return; }
+    const form = new FormData();
+    form.append('type', type || 'pdf');
+    form.append('name', name);
+    form.append('file', file);
+    try {
+      await api.post('/items', form);
+      toast.success('PDF uploaded');
+      setCreateOpen(false);
+      fetchPdfs();
+    } catch (e) {
+      toast.error(e?.response?.data?.message || 'Could not upload PDF');
+    }
+  };
+
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return [...items].filter((i) => i.name?.toLowerCase().includes(q)).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }, [items, query]);
+
+  return (
+    <PageShell title="PDFs" subtitle="Your documents, organised and ready to open" accent="rose" showSearch onSearch={setQuery} onAddClick={() => setCreateOpen(true)}>
+      <motion.div
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="mb-6 flex items-center justify-between"
+      >
+        <div>
+          <h2 className="text-2xl font-display font-bold text-ink-900 tracking-tight">All PDFs</h2>
+          <p className="text-[13px] text-ink-500">{items.length} document{items.length === 1 ? '' : 's'}</p>
         </div>
-    );
+        <button type="button" onClick={() => setCreateOpen(true)} className="w-btn-primary px-6 py-3 text-sm"><Plus size={16} /> Add PDF</button>
+      </motion.div>
+
+      <div className="grid gap-3.5 md:grid-cols-2 lg:grid-cols-3">
+        {loading ? (
+          <ListSkeleton rows={3} />
+        ) : visible.length === 0 ? (
+          <EmptyState
+            icon={FileText}
+            tone="rose"
+            title={items.length === 0 ? 'No PDFs yet' : 'No PDFs match that'}
+            text={items.length === 0 ? 'Upload your first PDF and it will appear here.' : 'Try a different search.'}
+            action={<button type="button" onClick={() => setCreateOpen(true)} className="w-btn-soft mt-4 px-5 py-2.5 text-sm font-bold">Add PDF</button>}
+          />
+        ) : (
+          <AnimatePresence mode="popLayout">
+            {visible.map((item, i) => (
+              <ItemCard
+                key={item._id}
+                item={item}
+                index={i}
+                onClick={() => actions.view(item)}
+                onFavorite={actions.toggleFavorite}
+                onCopy={actions.copy}
+                onRename={actions.rename}
+                onDuplicate={actions.duplicate}
+                onDelete={actions.remove}
+                onShare={actions.share}
+                onLock={actions.lockFolder}
+                onSecure={actions.secureItem}
+              />
+            ))}
+          </AnimatePresence>
+        )}
+      </div>
+
+      {createOpen && (
+        <CreateItemDialog
+          open={createOpen}
+          title="Add PDF"
+          subtitle="Upload a PDF file to keep it at your fingertips."
+          types={['pdf']}
+          defaultType="pdf"
+          onSubmit={createPdf}
+          onCancel={() => setCreateOpen(false)}
+        />
+      )}
+      {dialogs}
+    </PageShell>
+  );
 };
 
 export default AllPdfs;

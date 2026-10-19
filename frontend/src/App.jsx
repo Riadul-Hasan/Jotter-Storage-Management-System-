@@ -1,11 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-
-// Components
 import ProtectedRoute from './components/ProtectedRoute';
-
-// Pages
 import Landing from './pages/Landing';
 import Signup from './pages/Signup';
 import Login from './pages/Login';
@@ -26,13 +22,14 @@ import Support from './pages/Support';
 import AboutUs from './pages/AboutUs';
 import Terms from './pages/Terms';
 import LockedFolder from './pages/LockedFolder';
+import AllItems from './pages/AllItems';
 
 function App() {
   return (
     <Router>
       <div className="App">
         <Routes>
-          {/* Public Routes */}
+
           <Route path="/" element={<Landing />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/login" element={<Login />} />
@@ -40,7 +37,6 @@ function App() {
           <Route path="/verify-code" element={<VerifyCode />} />
           <Route path="/reset-password" element={<ResetPassword />} />
 
-          {/* Protected Routes */}
           <Route
             path="/home"
             element={
@@ -94,6 +90,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <AllPdfs />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/items"
+            element={
+              <ProtectedRoute>
+                <AllItems />
               </ProtectedRoute>
             }
           />
@@ -154,7 +158,7 @@ function App() {
             }
           />
 
-          {/* Catch all */}
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
 

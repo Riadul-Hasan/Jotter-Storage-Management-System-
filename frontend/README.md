@@ -6,14 +6,36 @@ A full-stack **Storage Management System** built with **Node.js**, **Express.js*
 
 ## 🎯 **Project Overview**
 
-Jotter is a comprehensive storage management application that enables users to:
-- **Upload & Organize** files (Notes, Images, PDFs)
-- **Create Folders** with nested structure
-- **Favorite Items** for quick access
-- **Calendar View** to track items by date
-- **Private Folder** with password protection
-- **Search & Filter** capabilities
-- **User Authentication** with session management
+Jotter is a comprehensive **Storage Management System** designed to help users securely store, organize, and manage their digital files in one centralized place. Built with a modular architecture, Jotter provides a seamless experience for handling notes, images, PDFs, and folders with advanced features like favorites, calendar tracking, and password-protected private storage.
+
+### **What Jotter Does**
+
+Jotter enables users to:
+
+- **Upload & Organize Files** — Store notes, images, and PDFs with drag-and-drop support and intuitive categorization
+- **Create Folders** — Build a nested folder structure to keep your files neatly organized
+- **Favorite Items** — Mark important files as favorites for quick access from the Favorites page
+- **Calendar View** — Track and view your files by date using an interactive calendar interface
+- **Private Locked Folder** — Secure sensitive items with password protection in a dedicated private folder
+- **Search & Filter** — Quickly find files using search functionality and filter by type or favorite status
+- **User Authentication** — Secure signup/login with session-based authentication and bcrypt password hashing
+
+### **Who It's For**
+
+Jotter is ideal for students, professionals, freelancers, and anyone who needs a reliable system to manage their digital documents, notes, and media files without relying on cloud storage subscriptions.
+
+### **Key Highlights**
+
+| Feature | Description |
+|---------|-------------|
+| 📁 **File Management** | Upload, view, and organize notes, images, and PDFs |
+| 📂 **Nested Folders** | Create and manage folders with parent-child relationships |
+| ⭐ **Favorites** | Star important items for instant access |
+| 📅 **Calendar View** | Visualize files by creation/update date |
+| 🔒 **Locked Folder** | Password-protected storage for private files |
+| 🔍 **Search & Filter** | Find files quickly with search and type/favorite filters |
+| 🔐 **Authentication** | Secure user login with session management |
+| 📱 **Responsive UI** | Mobile-first design with Tailwind CSS |
 
 ---
 
@@ -104,159 +126,50 @@ jotter-project/
 - MongoDB (local or Atlas)
 - npm or yarn
 
-### **1. Clone the Repository**
+### **Backend Setup:**
 ```bash
-git clone https://github.com/yourusername/jotter-storage-system.git
-cd jotter-storage-system
-```
-
-### **2. Backend Setup**
-
-```bash
-# Navigate to backend folder
 cd backend
-
-# Install dependencies
 npm install
-
-# Create .env file with the following:
-# PORT=5000
-# MONGO_URI=your_mongodb_connection_string
-# SESSION_SECRET=your_secret_key
-# CLIENT_URL=http://localhost:5173
-
-# Start the backend server
-npm run dev
+# Configure .env file with your MongoDB URI and session secret
+npm start
 ```
 
-The backend will run on `http://localhost:5000`
-
-### **3. Frontend Setup**
-
-Open a new terminal:
-
+### **Frontend Setup:**
 ```bash
-# Navigate to frontend folder
 cd frontend
-
-# Install dependencies
 npm install
-
-# Start the development server
 npm run dev
 ```
 
-The frontend will run on `http://localhost:5173`
+The frontend will run on `http://localhost:5173` by default.
 
 ---
 
-## 🔑 **Environment Variables**
+## 📱 **Features**
 
-Create a `.env` file in the `backend` folder:
+### **1. File Management**
+Upload and organize notes, images, and PDFs with ease.
 
-```env
-PORT=5000
-MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/jotter
-SESSION_SECRET=your-secret-key-here
-CLIENT_URL=http://localhost:5173
+### **2. Folder Organization**
+Create nested folders to structure your files hierarchically.
 
-# Email Configuration (optional)
-EMAIL_USER=your-email@gmail.com
-EMAIL_PASS=your-app-password
-```
+### **3. Favorites**
+Star important items for quick access from the dedicated Favorites page.
 
----
+### **4. Calendar View**
+View your files organized by date in an interactive calendar.
 
-## 📡 **API Endpoints**
+### **5. Private Locked Folder**
+Store sensitive files in a password-protected private folder.
 
-### **Authentication Routes** (`/api/auth`)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/signup` | Register new user |
-| POST | `/login` | User login |
-| POST | `/logout` | User logout |
-| GET | `/me` | Get current user |
-| POST | `/forgot-password` | Send password reset code |
-| POST | `/verify-code` | Verify reset code |
-| POST | `/reset-password` | Reset password |
+### **6. Search & Filter**
+Search for files and filter by type (note, image, pdf, folder) or favorite status.
 
-### **Item Routes** (`/api/items`)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/` | Get all items (with filters) |
-| GET | `/stats` | Get storage statistics |
-| GET | `/recent` | Get recent items |
-| GET | `/locked` | Get locked folder items |
-| POST | `/` | Create new item |
-| GET | `/:id` | Get item by ID |
-| PUT | `/:id` | Update item |
-| DELETE | `/:id` | Delete item |
-| PATCH | `/:id/favorite` | Toggle favorite |
-| POST | `/:id/duplicate` | Duplicate item |
-| POST | `/:id/share` | Generate share link |
-
-### **Folder Routes** (`/api/folders`)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/:id/lock` | Lock folder with password |
-| POST | `/:id/unlock` | Unlock folder |
-| POST | `/:id/remove-lock` | Remove folder lock |
-
-### **Profile Routes** (`/api/profile`)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/` | Get user profile |
-| PUT | `/` | Update profile |
-| POST | `/set-lock-password` | Set private folder password |
-| POST | `/verify-lock-password` | Verify private folder password |
-
----
-
-## ✨ **Key Features**
-
-### **1. User Authentication**
-- Secure signup/login with bcrypt password hashing
-- Session-based authentication
-- Password reset with email verification
-- Protected routes
-
-### **2. File Management**
-- Upload images, PDFs, and create notes
-- Organize files in folders
-- View files in modal with download option
-- Delete, rename, duplicate files
-- Copy to clipboard functionality
-
-### **3. Storage Statistics**
-- Real-time storage usage tracking
-- Category-wise breakdown (Folders, Notes, Images, PDFs)
-- Visual storage progress bar
-
-### **4. Favorites**
-- Mark items as favorites
-- Quick access to favorite items
-- View favorites in dedicated page
-
-### **5. Calendar View**
-- View items by date
-- Month navigation
-- Date-specific item filtering
-
-### **6. Private Folder**
-- Password-protected storage
-- Separate locked items
-- Full CRUD operations in private folder
-
-### **7. Search & Filter**
-- Search items by name
-- Filter by type (note, image, pdf, folder)
-- Filter by favorite status
+### **7. User Authentication**
+Secure signup and login with session-based authentication.
 
 ### **8. Responsive Design**
-- Mobile-first approach
-- Tailwind CSS styling
-- Bottom navigation for mobile
-- Modal-based file viewing
+Mobile-first approach with Tailwind CSS and bottom navigation for mobile.
 
 ---
 
@@ -386,7 +299,7 @@ For any questions or issues, please contact:
 
 ---
 
-**Last Updated:** January 16, 2025
+**Last Updated:** October 17, 2026
 
 ---
 

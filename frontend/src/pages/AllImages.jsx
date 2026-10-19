@@ -1,293 +1,120 @@
-// import { useState, useEffect } from 'react';
-// import { toast } from 'react-toastify';
-// import Header from '../components/Header';
-// import BottomNav from '../components/BottomNav';
-// import ItemCard from '../components/ItemCard';
-// import api from '../api/axios';
-
-// const AllImages = () => {
-//     const [items, setItems] = useState([]);
-//     const [loading, setLoading] = useState(true);
-//     const [selectedItem, setSelectedItem] = useState(null);
-
-//     useEffect(() => {
-//         fetchImages();
-//     }, []);
-
-//     const fetchImages = async () => {
-//         try {
-//             const res = await api.get('/items?type=image');
-//             setItems(res.data.items);
-//         } catch (e) {
-//             toast.error('Failed to load images');
-//         } finally {
-//             setLoading(false);
-//         }
-//     };
-
-//     const handleFavorite = async (item) => {
-//         try {
-//             await api.patch(`/items/${item._id}/favorite`);
-//             fetchImages();
-//         } catch (error) {
-//             toast.error('Failed to update');
-//         }
-//     };
-
-//     const handleDelete = async (item) => {
-//         if (!window.confirm(`Delete "${item.name}"?`)) return;
-//         try {
-//             await api.delete(`/items/${item._id}`);
-//             toast.success('Deleted');
-//             fetchImages();
-//         } catch (error) {
-//             toast.error('Failed to delete');
-//         }
-//     };
-
-//     const handleCopy = async (item) => {
-//         try {
-//             const textToCopy = `Name: ${item.name}\nType: Image`;
-//             await navigator.clipboard.writeText(textToCopy);
-//             toast.success('Copied to clipboard!');
-//         } catch (error) {
-//             toast.error('Failed to copy');
-//         }
-//     };
-
-//     // Helper function to get file extension from filePath
-//     const getFileExtension = (filePath) => {
-//         return filePath.split('.').pop();
-//     };
-
-//     // Helper function to create a proper download URL
-//     const getDownloadUrl = (item) => {
-//         const extension = getFileExtension(item.filePath);
-//         const fileName = `${item.name}.${extension}`;
-//         return `http://localhost:5000${item.filePath}?download=true&filename=${encodeURIComponent(fileName)}`;
-//     };
-
-//     if (loading) {
-//         return (
-//             <div className="flex items-center justify-center min-h-screen">
-//                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
-//             </div>
-//         );
-//     }
-
-//     return (
-//         <div className="min-h-screen bg-gray-50 pb-20">
-//             <Header title="Images" />
-//             <div className="p-4 space-y-2">
-//                 {items.map(item => (
-//                     <ItemCard
-//                         key={item._id}
-//                         item={item}
-//                         onClick={() => setSelectedItem(item)}
-//                         onFavorite={handleFavorite}
-//                         onCopy={handleCopy}
-//                         onRename={() => { }}
-//                         onDuplicate={() => { }}
-//                         onDelete={handleDelete}
-//                         onShare={() => { }}
-//                         onLock={() => { }}
-//                     />
-//                 ))}
-//                 {items.length === 0 && (
-//                     <p className="text-center text-gray-500 py-8">No images yet</p>
-//                 )}
-//             </div>
-
-//             <BottomNav />
-
-//             {/* View Image Modal */}
-//             {selectedItem && (
-//                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-//                     <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-//                         <div className="sticky top-0 bg-white border-b px-4 py-3 flex justify-between items-center">
-//                             <h2 className="text-lg font-bold">{selectedItem.name}</h2>
-//                             <button
-//                                 onClick={() => setSelectedItem(null)}
-//                                 className="text-gray-600 hover:text-gray-900 text-2xl"
-//                             >
-//                                 ×
-//                             </button>
-//                         </div>
-//                         <div className="p-4">
-//                             <img
-//                                 src={`http://localhost:5000${selectedItem.filePath}`}
-//                                 alt={selectedItem.name}
-//                                 className="w-full h-auto rounded-lg"
-//                             />
-//                             <a
-//                                 href={getDownloadUrl(selectedItem)}
-//                                 download={`${selectedItem.name}.${getFileExtension(selectedItem.filePath)}`}
-//                                 className="mt-4 flex items-center gap-2 justify-center bg-black text-white py-2 px-4 rounded-lg hover:bg-gray-800"
-//                             >
-//                                 Download Image
-//                             </a>
-//                         </div>
-//                     </div>
-//                 </div>
-//             )}
-//         </div>
-//     );
-// };
-
-// export default AllImages;
-
-
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-toastify';
-import { FaDownload } from 'react-icons/fa';
-import Header from '../components/Header';
-import BottomNav from '../components/BottomNav';
+import { Image as ImageIcon, Plus, Search } from 'lucide-react';
+import PageShell from '../components/PageShell';
 import ItemCard from '../components/ItemCard';
+import useItemActions from '../hooks/useItemActions';
 import api from '../api/axios';
+import { cx, EASE } from '../utils/format';
+import { EmptyState, ListSkeleton } from '../components/Skeletons';
+import { CreateItemDialog } from '../components/Dialogs';
 
 const AllImages = () => {
-    const [items, setItems] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [selectedItem, setSelectedItem] = useState(null);
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
+  const [createOpen, setCreateOpen] = useState(false);
 
-    useEffect(() => {
-        fetchImages();
-    }, []);
-
-    const fetchImages = async () => {
-        try {
-            const res = await api.get('/items?type=image');
-            setItems(res.data.items);
-        } catch (e) {
-            toast.error('Failed to load images');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleFavorite = async (item) => {
-        try {
-            await api.patch(`/items/${item._id}/favorite`);
-            fetchImages();
-        } catch (error) {
-            toast.error('Failed to update');
-        }
-    };
-
-    const handleDelete = async (item) => {
-        if (!window.confirm(`Delete "${item.name}"?`)) return;
-        try {
-            await api.delete(`/items/${item._id}`);
-            toast.success('Deleted');
-            fetchImages();
-        } catch (error) {
-            toast.error('Failed to delete');
-        }
-    };
-
-    const handleCopy = async (item) => {
-        try {
-            const textToCopy = `Name: ${item.name}\nType: Image`;
-            await navigator.clipboard.writeText(textToCopy);
-            toast.success('Copied to clipboard!');
-        } catch (error) {
-            toast.error('Failed to copy');
-        }
-    };
-
-    // ✅ FIXED: Proper download handler
-    const handleDownload = async (item) => {
-        try {
-            const response = await fetch(`http://localhost:5000${item.filePath}`);
-            const blob = await response.blob();
-            
-            // Get file extension from filePath
-            const extension = item.filePath.split('.').pop();
-            const fileName = `${item.name}.${extension}`;
-            
-            // Create download link
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = fileName;
-            document.body.appendChild(link);
-            link.click();
-            
-            // Cleanup
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(url);
-            
-            toast.success('Download started!');
-        } catch (error) {
-            toast.error('Failed to download image');
-            console.error('Download error:', error);
-        }
-    };
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
-            </div>
-        );
+  const fetchImages = useCallback(async () => {
+    try {
+      const res = await api.get('/items?type=image');
+      setItems(res.data.items || []);
+    } catch {
+      toast.error('Could not load images');
+    } finally {
+      setLoading(false);
     }
+  }, []);
 
-    return (
-        <div className="min-h-screen bg-gray-50 pb-20">
-            <Header title="Images" />
-            <div className="p-4 space-y-2">
-                {items.map(item => (
-                    <ItemCard
-                        key={item._id}
-                        item={item}
-                        onClick={() => setSelectedItem(item)}
-                        onFavorite={handleFavorite}
-                        onCopy={handleCopy}
-                        onRename={() => { }}
-                        onDuplicate={() => { }}
-                        onDelete={handleDelete}
-                        onShare={() => { }}
-                        onLock={() => { }}
-                    />
-                ))}
-                {items.length === 0 && (
-                    <p className="text-center text-gray-500 py-8">No images yet</p>
-                )}
-            </div>
+  useEffect(() => { fetchImages(); }, [fetchImages]);
 
-            <BottomNav />
+  // Shared actions — re-fetches the grid after every mutation.
+  const { actions, dialogs } = useItemActions(fetchImages);
 
-            {/* View Image Modal */}
-            {selectedItem && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-                        <div className="sticky top-0 bg-white border-b px-4 py-3 flex justify-between items-center">
-                            <h2 className="text-lg font-bold">{selectedItem.name}</h2>
-                            <button
-                                onClick={() => setSelectedItem(null)}
-                                className="text-gray-600 hover:text-gray-900 text-2xl"
-                            >
-                                ×
-                            </button>
-                        </div>
-                        <div className="p-4">
-                            <img
-                                src={`http://localhost:5000${selectedItem.filePath}`}
-                                alt={selectedItem.name}
-                                className="w-full h-auto rounded-lg"
-                            />
-                            <button
-                                onClick={() => handleDownload(selectedItem)}
-                                className="mt-4 w-full flex items-center gap-2 justify-center bg-black text-white py-2 px-4 rounded-lg hover:bg-gray-800"
-                            >
-                                <FaDownload /> Download Image
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+  const createImage = async ({ type, name, file }) => {
+    if (!file) { toast.error('Please choose an image'); return; }
+    const form = new FormData();
+    form.append('type', type || 'image');
+    form.append('name', name);
+    form.append('file', file);
+    try {
+      await api.post('/items', form);
+      toast.success('Image uploaded');
+      setCreateOpen(false);
+      fetchImages();
+    } catch (e) {
+      toast.error(e?.response?.data?.message || 'Could not upload image');
+    }
+  };
+
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return [...items].filter((i) => i.name?.toLowerCase().includes(q)).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }, [items, query]);
+
+  return (
+    <PageShell title="Images" subtitle="Your photos and pictures, beautifully laid out" accent="sky" showSearch onSearch={setQuery} onAddClick={() => setCreateOpen(true)}>
+      <motion.div
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="mb-6 flex items-center justify-between"
+      >
+        <div>
+          <h2 className="text-2xl font-display font-bold text-ink-900 tracking-tight">All images</h2>
+          <p className="text-[13px] text-ink-500">{items.length} image{items.length === 1 ? '' : 's'}</p>
         </div>
-    );
+        <button type="button" onClick={() => setCreateOpen(true)} className="w-btn-primary px-6 py-3 text-sm"><Plus size={16} /> Add image</button>
+      </motion.div>
+
+      <div className="grid gap-3.5 md:grid-cols-3 lg:grid-cols-4">
+        {loading ? (
+          <ListSkeleton rows={3} />
+        ) : visible.length === 0 ? (
+          <EmptyState
+            icon={ImageIcon}
+            tone="sky"
+            title={items.length === 0 ? 'No images yet' : 'No images match that'}
+            text={items.length === 0 ? 'Upload your first image and it will appear here.' : 'Try a different search.'}
+            action={<button type="button" onClick={() => setCreateOpen(true)} className="w-btn-soft mt-4 px-5 py-2.5 text-sm font-bold">Add image</button>}
+          />
+        ) : (
+          <AnimatePresence mode="popLayout">
+            {visible.map((item, i) => (
+              <ItemCard
+                key={item._id}
+                item={item}
+                index={i}
+                onClick={() => actions.view(item)}
+                onFavorite={actions.toggleFavorite}
+                onCopy={actions.copy}
+                onRename={actions.rename}
+                onDuplicate={actions.duplicate}
+                onDelete={actions.remove}
+                onShare={actions.share}
+                onLock={actions.lockFolder}
+                onSecure={actions.secureItem}
+              />
+            ))}
+          </AnimatePresence>
+        )}
+      </div>
+
+      {createOpen && (
+        <CreateItemDialog
+          open={createOpen}
+          title="Add image"
+          subtitle="Upload an image file to keep it safe."
+          types={['image']}
+          defaultType="image"
+          onSubmit={createImage}
+          onCancel={() => setCreateOpen(false)}
+        />
+      )}
+      {dialogs}
+    </PageShell>
+  );
 };
 
 export default AllImages;

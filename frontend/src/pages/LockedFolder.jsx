@@ -1,361 +1,428 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-toastify';
-import { FaLock } from 'react-icons/fa'; // ✅ ADDED THIS IMPORT
-import Header from '../components/Header';
-import BottomNav from '../components/BottomNav';
-import ItemCard from '../components/ItemCard';
+import {
+  Lock, Sparkles, List, Layout, StickyNote, Image as ImageIcon, FileText, Check,
+  FolderOpen, Plus, Search as SearchIcon,
+} from 'lucide-react';
+import PageShell from '../components/PageShell';
 import api from '../api/axios';
+import { cx, formatBytes, formatDate, metaFor, avatarUrl } from '../utils/format';
+import { EmptyState, ListSkeleton } from '../components/Skeletons';
+import { PasswordDialog } from '../components/Dialogs';
+import useItemActions from '../hooks/useItemActions';
+
+const TYPE_ICON = {
+  note: StickyNote,
+  image: ImageIcon,
+  pdf: FileText,
+  folder: FolderOpen,
+};
+
+const CATEGORY_ORDER = ['folder', 'image', 'note', 'pdf'];
+
+const categoryLabel = (type) => {
+  const labels = { folder: 'Folders', image: 'Images', note: 'Notes', pdf: 'PDFs' };
+  return labels[type] || type;
+};
+
+const VaultItem = ({ item, index, onRemoveLock, list, onClick }) => {
+  const [unlockOpen, setUnlockOpen] = useState(false);
+  const [unlockPwd, setUnlockPwd] = useState('');
+  const [unlockError, setUnlockError] = useState('');
+  const meta = metaFor(item.type);
+  const thumb = item.type === 'image' && item.filePath ? avatarUrl(item.filePath) : null;
+
+  const doUnlock = async () => {
+    try {
+      await api.post(`/items/${item._id}/unlock`, { password: unlockPwd });
+      toast.success('Moved back to your library');
+      setUnlockOpen(false);
+      setUnlockPwd('');
+      setUnlockError('');
+      onRemoveLock();
+    } catch (e) {
+      setUnlockError(e?.response?.data?.message || 'Incorrect password');
+    }
+  };
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: index * 0.04 }}
+      onClick={() => onClick?.(item)}
+      className={cx(
+        'relative cursor-pointer rounded-[22px] border border-cream-200 bg-white/80 p-3.5 shadow-warm-xs transition-all hover:-translate-y-1 hover:border-cream-300 hover:shadow-warm-sm',
+        list ? 'flex items-center gap-3 px-4 py-3' : 'flex flex-col gap-3 p-4'
+      )}
+    >
+      <div className={cx('grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br text-white shadow-sm overflow-hidden', meta.solid)}>
+        {thumb ? (
+          <img src={thumb} alt={item.name} className="h-full w-full object-cover" />
+        ) : (
+          <meta.Icon size={18} strokeWidth={2.2} />
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <h4 className="truncate text-sm font-bold text-ink-900">{item.name}</h4>
+          {item.isLocked && <span className="text-[10px] font-bold bg-rose-50 text-rose-700 rounded-full px-2 py-0.5">Locked</span>}
+        </div>
+        <p className="text-[11.5px] text-ink-500">{meta.label} · {formatDate(item.createdAt)}</p>
+        {item.fileSize && <p className="text-[11px] text-ink-400">{formatBytes(item.fileSize)}</p>}
+      </div>
+      <div className={cx('flex items-center gap-2', list ? 'ml-auto' : 'mt-3')}>
+        <button type="button" onClick={(e) => { e.stopPropagation(); setUnlockPwd(''); setUnlockError(''); setUnlockOpen(true); }} className="p-2 rounded-xl text-ink-400 hover:bg-rose-50 hover:text-rose-600 transition" title="Restore to library"><Check size={16} /></button>
+      </div>
+      {unlockOpen && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-[22px] border border-cream-200">
+          <div className="w-full max-w-sm p-4">
+            <p className="text-sm font-bold text-ink-900 mb-1">Restore to library</p>
+            <p className="text-xs text-ink-500 mb-3">Enter the vault password</p>
+            <input type="password" value={unlockPwd} onChange={(e) => setUnlockPwd(e.target.value)} placeholder="Password" className="w-field mb-3" onKeyDown={(e) => e.key === 'Enter' && doUnlock()} />
+            {unlockError && <p className="text-[12px] text-rose-600 mb-3">{unlockError}</p>}
+            <div className="flex gap-2">
+              <button type="button" onClick={(e) => { e.stopPropagation(); setUnlockOpen(false); }} className="flex-1 w-btn-soft py-2 text-sm font-bold">Cancel</button>
+              <button type="button" onClick={(e) => { e.stopPropagation(); doUnlock(); }} className="flex-1 w-btn-primary py-2 text-sm font-bold">Continue</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </motion.div>
+  );
+};
 
 const LockedFolder = () => {
+  const location = useLocation();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [addType, setAddType] = useState('');
-  const [formData, setFormData] = useState({ name: '', content: '', file: null });
-  const [showRenameModal, setShowRenameModal] = useState(false);
-  const [renameItem, setRenameItem] = useState(null);
-  const [newName, setNewName] = useState('');
-  const [selectedItem, setSelectedItem] = useState(null);
+  const [stage, setStage] = useState('checking');
+  const [pwError, setPwError] = useState('');
+  const [pwLoading, setPwLoading] = useState(false);
+  const [view, setView] = useState('grid');
 
-  useEffect(() => {
-    fetchLockedItems();
-  }, []);
-
-  const fetchLockedItems = async () => {
+  const fetchLocked = useCallback(async () => {
     try {
-      const response = await api.get('/items/locked');
-      setItems(response.data.items);
-    } catch (error) {
-      toast.error('Failed to load items');
+      const res = await api.get('/items/locked');
+      setItems(res.data.items || []);
+    } catch {
+      toast.error('Could not load the vault');
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  const { actions, dialogs } = useItemActions(fetchLocked);
+
+  const removeLock = useCallback(() => {
+    fetchLocked();
+  }, [fetchLocked]);
+
+  /* ---------- Import-to-vault ---------- */
+  const [importOpen, setImportOpen] = useState(false);
+  const [libraryItems, setLibraryItems] = useState([]);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [importLoading, setImportLoading] = useState(false);
+  const [importQuery, setImportQuery] = useState('');
+
+  const fetchLibrary = useCallback(async () => {
+    try {
+      const res = await api.get('/items?isLocked=false');
+      setLibraryItems(res.data.items || []);
+    } catch {
+      toast.error('Could not load library items');
+    }
+  }, []);
+
+  const visibleLibrary = useMemo(() => {
+    const q = importQuery.trim().toLowerCase();
+    return [...libraryItems]
+      .filter((i) => i.name?.toLowerCase().includes(q))
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }, [libraryItems, importQuery]);
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
-  const handleAdd = async (e) => {
-    e.preventDefault();
+  const isSelected = (id) => selectedIds.has(id);
 
+  const doImport = async () => {
+    if (selectedIds.size === 0) return;
+    setImportLoading(true);
+    setImportError('');
     try {
-      const data = new FormData();
-      data.append('type', addType);
-      data.append('name', formData.name);
-      data.append('isLocked', 'true'); // Mark as locked item
-      
-      if (addType === 'note') {
-        data.append('content', formData.content);
+      await api.post('/items/bulk-lock', { ids: Array.from(selectedIds), password: importPwd });
+      toast.success(`${selectedIds.size} item${selectedIds.size === 1 ? '' : 's'} moved to vault`);
+      setImportOpen(false);
+      setSelectedIds(new Set());
+      setImportPwd('');
+      fetchLocked();
+    } catch (e) {
+      setImportError(e?.response?.data?.message || 'Import failed. Please check your vault password.');
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const [importPwd, setImportPwd] = useState('');
+  const [importError, setImportError] = useState('');
+
+  useEffect(() => { fetchLibrary(); }, [fetchLibrary]);
+
+  // `location` is stable within a mount, so this runs once when the vault
+  // route is entered (including when arriving from Profile after a successful
+  // password verification).
+  useEffect(() => {
+    let alive = true;
+    if (location.state?.unlockFromProfile) {
+      // The user just verified their vault password on the Profile page.
+      // Land directly in the vault without prompting again.
+      if (alive) setStage('open');
+      return;
+    }
+    api.get('/auth/me').then((res) => {
+      if (!alive) return;
+      setStage(Boolean(res.data?.user?.hasLockPassword) ? 'locked' : 'setup');
+    }).catch(() => { if (alive) setStage('locked'); });
+    return () => { alive = false; };
+  }, [location]);
+
+  useEffect(() => { if (stage === 'open') fetchLocked(); }, [stage, fetchLocked]);
+
+  const submitVault = async (password) => {
+    setPwLoading(true);
+    try {
+      if (stage === 'setup') {
+        await api.post('/profile/set-lock-password', { lockPassword: password });
+        toast.success('Private vault created');
+      } else {
+        await api.post('/profile/verify-lock-password', { lockPassword: password });
+        toast.success('Vault unlocked');
       }
-      
-      if (formData.file) {
-        data.append('file', formData.file);
-      }
-
-      await api.post('/items', data, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-
-      toast.success(`${addType.charAt(0).toUpperCase() + addType.slice(1)} added to private folder`);
-      setShowAddModal(false);
-      setAddType('');
-      setFormData({ name: '', content: '', file: null });
-      fetchLockedItems();
-    } catch (error) {
-      toast.error('Failed to create item');
+      setStage('open');
+      setPwError('');
+    } catch (e) {
+      setPwError(e?.response?.data?.message || 'Incorrect password');
+    } finally {
+      setPwLoading(false);
     }
   };
-
-  const handleFavorite = async (item) => {
-    try {
-      await api.patch(`/items/${item._id}/favorite`);
-      fetchLockedItems();
-    } catch (error) {
-      toast.error('Failed to update');
-    }
-  };
-
-  const handleDelete = async (item) => {
-    if (!window.confirm(`Delete "${item.name}"?`)) return;
-
-    try {
-      await api.delete(`/items/${item._id}`);
-      toast.success('Item deleted');
-      fetchLockedItems();
-    } catch (error) {
-      toast.error('Failed to delete');
-    }
-  };
-
-  const handleCopy = async (item) => {
-    try {
-      const textToCopy = `Name: ${item.name}\nType: ${item.type}\nCreated: ${new Date(item.createdAt).toLocaleDateString()}`;
-      await navigator.clipboard.writeText(textToCopy);
-      toast.success('Copied to clipboard!');
-    } catch (error) {
-      toast.error('Failed to copy');
-    }
-  };
-
-  const handleDuplicate = async (item) => {
-    try {
-      await api.post(`/items/${item._id}/duplicate`);
-      toast.success('Item duplicated');
-      fetchLockedItems();
-    } catch (error) {
-      toast.error('Failed to duplicate');
-    }
-  };
-
-  const handleShare = async (item) => {
-    try {
-      const response = await api.post(`/items/${item._id}/share`);
-      navigator.clipboard.writeText(response.data.shareLink);
-      toast.success('Share link copied');
-    } catch (error) {
-      toast.error('Failed to generate share link');
-    }
-  };
-
-  const handleRename = (item) => {
-    setRenameItem(item);
-    setNewName(item.name);
-    setShowRenameModal(true);
-  };
-
-  const submitRename = async () => {
-    try {
-      await api.put(`/items/${renameItem._id}`, { name: newName });
-      toast.success('Item renamed');
-      setShowRenameModal(false);
-      fetchLockedItems();
-    } catch (error) {
-      toast.error('Failed to rename');
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
-      </div>
-    );
-  }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      <Header title="🔒 Private Folder" showSearch={false} />
+    <PageShell title="Private vault" subtitle="Your password-protected items stay hidden here" accent="grape">
+      {stage === 'checking' && (
+        <div className="flex h-[60vh] items-center justify-center"><ListSkeleton rows={3} /></div>
+      )}
 
-      <div className="p-4">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-          <p className="text-sm text-blue-800">
-            🔐 This is your private folder. Only you can access items here.
-          </p>
-        </div>
+      {(stage === 'setup' || stage === 'locked') && (
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }} className="flex h-[55vh] flex-col items-center justify-center">
+          <div className="rounded-[34px] border border-cream-200 bg-white/90 p-8 sm:p-12 shadow-warm-lg max-w-md w-full">
+            <div className="grid h-16 w-16 place-items-center rounded-full bg-gradient-to-br from-brand-grape to-purple-500 text-white shadow-[0_8px_24px_rgba(139,92,246,0.35)] mb-6">
+              {stage === 'setup' ? <Sparkles size={26} strokeWidth={2} /> : <Lock size={26} strokeWidth={2} />}
+            </div>
+            <h3 className="text-xl font-display font-bold text-ink-900 text-center mb-2">{stage === 'setup' ? 'Create your vault' : 'Unlock your vault'}</h3>
+            <p className="text-center text-ink-500 text-sm mb-6">{stage === 'setup' ? 'Set a password to protect your private items. Only you can open the vault.' : 'Enter your vault password to see your protected items.'}</p>
+            <p className={cx('text-[12px] text-center mb-6', pwError ? 'text-rose-600' : 'text-ink-500')}>{pwError}</p>
+          </div>
+        </motion.div>
+      )}
 
-        <div className="space-y-2">
-          {items.map(item => (
-            <ItemCard
-              key={item._id}
-              item={item}
-              onClick={(item) => setSelectedItem(item)}
-              onFavorite={handleFavorite}
-              onCopy={handleCopy}
-              onRename={handleRename}
-              onDuplicate={handleDuplicate}
-              onDelete={handleDelete}
-              onShare={handleShare}
-              onLock={() => {}}
-            />
-          ))}
-          {items.length === 0 && (
-            <div className="text-center py-12">
-              <FaLock className="mx-auto text-gray-300 mb-4" size={48} />
-              <p className="text-gray-500">No items in private folder yet</p>
+      {stage === 'open' && (
+        <>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h2 className="text-2xl font-display font-bold text-ink-900 tracking-tight">Vault items</h2>
+              <p className="text-[13px] text-ink-500">{items.length} protected item{items.length === 1 ? '' : 's'}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => setView(view === 'grid' ? 'list' : 'grid')} className={cx('w-10 h-10 rounded-2xl border border-cream-300 bg-white flex items-center justify-center text-ink-700 hover:bg-cream-100 transition', view === 'grid' && 'bg-brand-grape/10 border-brand-grape/20 text-brand-grape')}>{view === 'grid' ? <List size={16} /> : <Layout size={16} />}</button>
               <button
-                onClick={() => setShowAddModal(true)}
-                className="mt-4 px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-800"
+                type="button"
+                onClick={() => { setImportOpen(true); fetchLibrary(); }}
+                className="w-btn-primary px-5 py-2.5 text-sm flex items-center gap-2"
               >
-                Add First Item
+                <Plus size={16} /> Import to vault
               </button>
             </div>
-          )}
-        </div>
-      </div>
+          </motion.div>
+          <div className={cx('grid gap-3.5 md:grid-cols-2 lg:grid-cols-3', view === 'grid' ? '' : 'flex flex-col')}>
+            {items.length === 0 ? (
+              <EmptyState icon={Lock} tone="grape" title="Your vault is empty" text="Lock a folder from Home or Folders and it will appear here, protected by your password." />
+            ) : (
+              view === 'grid' ? (
+                <AnimatePresence mode="popLayout">{items.map((item, i) => <VaultItem key={item._id} item={item} index={i} onRemoveLock={removeLock} onClick={actions.view} />)}</AnimatePresence>
+              ) : (
+                <div className="space-y-2.5">{items.map((item, i) => <VaultItem key={item._id} item={item} index={i} onRemoveLock={removeLock} list onClick={actions.view} />)}</div>
+              )
+            )}
+          </div>
+          {dialogs}
+        </>
+      )}
 
-      <BottomNav onAddClick={() => setShowAddModal(true)} />
+      <PasswordDialog
+        open={stage === 'setup' || stage === 'locked'}
+        mode={stage === 'setup' ? 'set' : 'verify'}
+        itemName=""
+        error={pwError}
+        loading={pwLoading}
+        onSubmit={submitVault}
+        onCancel={() => setPwError('')}
+      />
 
-      {/* Add Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            {!addType ? (
-              <>
-                <h2 className="text-xl font-bold mb-4">Add to Private Folder</h2>
-                <div className="space-y-2">
+      {/* ---------- Import-to-vault dialog ---------- */}
+      {importOpen && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/30 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-[28px] border border-cream-200 bg-white shadow-warm-xl"
+          >
+            <div className="flex items-start gap-3 px-6 pb-4 pt-6">
+              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-brand-mint to-emerald-500 text-white shadow-warm-sm">
+                <Plus size={20} strokeWidth={2.2} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="w-title text-lg font-bold text-ink-900">Import to vault</h3>
+                <p className="w-sub mt-1 text-[13px]">Select items from your library to protect in your private vault.</p>
+              </div>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-5">
+              <div className="relative mb-4">
+                <SearchIcon className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-400" size={16} />
+                <input
+                  type="search"
+                  value={importQuery}
+                  onChange={(e) => setImportQuery(e.target.value)}
+                  placeholder="Search library items…"
+                  className="w-field !py-2.5 !pl-10 text-[13.5px]"
+                />
+              </div>
+
+              <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
+                {CATEGORY_ORDER.map((cat) => {
+                  const catItems = visibleLibrary.filter((item) => item.type === cat);
+                  const CatIcon = TYPE_ICON[cat];
+                  if (catItems.length === 0) return null;
+
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => catItems.forEach((item) => toggleSelect(item._id))}
+                      className="flex items-center gap-2 rounded-xl border border-cream-300 bg-white px-3 py-2 text-[12px] font-semibold text-ink-600 transition hover:bg-cream-100"
+                    >
+                      <CatIcon size={14} />
+                      {categoryLabel(cat)} ({catItems.length})
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="space-y-2">
+                {visibleLibrary.length === 0 ? (
+                  <div className="py-8 text-center text-[13px] text-ink-400">
+                    No library items available to import.
+                  </div>
+                ) : (
+                  visibleLibrary.map((item) => {
+                    const ItemIcon = TYPE_ICON[item.type] || FolderOpen;
+                    return (
+                      <button
+                        key={item._id}
+                        type="button"
+                        onClick={() => toggleSelect(item._id)}
+                        className={cx(
+                          'flex w-full items-center gap-3 rounded-xl border p-3 text-left transition',
+                          isSelected(item._id)
+                            ? 'border-brand-grape/50 bg-brand-grape/10'
+                            : 'border-cream-200 bg-white hover:border-cream-300 hover:bg-cream-50'
+                        )}
+                      >
+                        <div className={cx('grid h-10 w-10 shrink-0 place-items-center rounded-xl text-white shadow-sm', metaFor(item.type).solid)}>
+                          <ItemIcon size={16} strokeWidth={2.2} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-bold text-ink-900">{item.name}</p>
+                          <p className="truncate text-[11px] text-ink-500">{categoryLabel(item.type)}</p>
+                        </div>
+                        {isSelected(item._id) && <Check size={16} className="text-brand-grape" />}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            <div className="border-t border-cream-200 px-6 pb-6 pt-4">
+              <div className="mb-3 flex items-center justify-between">
+                <span className="text-[12px] font-bold text-ink-700">
+                  {selectedIds.size} item{selectedIds.size === 1 ? '' : 's'} selected
+                </span>
+                {selectedIds.size > 0 && (
                   <button
-                    onClick={() => setAddType('note')}
-                    className="w-full p-4 text-left border border-gray-200 rounded-lg hover:bg-gray-50"
+                    type="button"
+                    onClick={() => setSelectedIds(new Set())}
+                    className="text-[11px] font-bold text-rose-600 hover:underline"
                   >
-                    📝 Note
+                    Clear all
                   </button>
-                  <button
-                    onClick={() => setAddType('image')}
-                    className="w-full p-4 text-left border border-gray-200 rounded-lg hover:bg-gray-50"
-                  >
-                    🖼️ Image
-                  </button>
-                  <button
-                    onClick={() => setAddType('pdf')}
-                    className="w-full p-4 text-left border border-gray-200 rounded-lg hover:bg-gray-50"
-                  >
-                    📄 PDF
-                  </button>
-                  <button
-                    onClick={() => setAddType('folder')}
-                    className="w-full p-4 text-left border border-gray-200 rounded-lg hover:bg-gray-50"
-                  >
-                    📁 Folder
-                  </button>
-                </div>
+                )}
+              </div>
+
+              {selectedIds.size > 0 && (
+                <>
+                  <div className="flex items-center gap-2 rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-[12px] text-rose-700">
+                    <Lock size={14} className="shrink-0" />
+                    Enter your vault password to import these items.
+                  </div>
+                  <input
+                    type="password"
+                    value={importPwd}
+                    onChange={(e) => setImportPwd(e.target.value)}
+                    placeholder="Vault password"
+                    className="w-field mt-3 text-[13px] tracking-[0.2em]"
+                    onKeyDown={(e) => e.key === 'Enter' && doImport()}
+                  />
+                </>
+              )}
+
+              {importError && <p className="mt-2 text-[12px] text-rose-600">{importError}</p>}
+
+              <div className="mt-4 flex gap-2">
                 <button
-                  onClick={() => setShowAddModal(false)}
-                  className="w-full mt-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  type="button"
+                  onClick={() => setImportOpen(false)}
+                  className="w-btn-soft flex-1 py-3 text-sm font-bold"
                 >
                   Cancel
                 </button>
-              </>
-            ) : (
-              <form onSubmit={handleAdd}>
-                <h2 className="text-xl font-bold mb-4">
-                  Create {addType.charAt(0).toUpperCase() + addType.slice(1)}
-                </h2>
-                
-                <input
-                  type="text"
-                  placeholder="Name"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-3"
-                />
-
-                {addType === 'note' && (
-                  <textarea
-                    placeholder="Content"
-                    value={formData.content}
-                    onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-                    rows={4}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-3"
-                  />
-                )}
-
-                {(addType === 'image' || addType === 'pdf') && (
-                  <input
-                    type="file"
-                    accept={addType === 'image' ? 'image/*' : '.pdf'}
-                    onChange={(e) => setFormData(prev => ({ ...prev, file: e.target.files[0] }))}
-                    required
-                    className="w-full mb-3"
-                  />
-                )}
-
-                <div className="flex gap-2">
-                  <button
-                    type="submit"
-                    className="flex-1 bg-black text-white py-2 rounded-lg hover:bg-gray-800"
-                  >
-                    Create
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowAddModal(false);
-                      setAddType('');
-                      setFormData({ name: '', content: '', file: null });
-                    }}
-                    className="flex-1 border border-gray-300 py-2 rounded-lg hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
+                <button
+                  type="button"
+                  onClick={doImport}
+                  disabled={selectedIds.size === 0 || importLoading || !importPwd}
+                  className="w-btn-primary flex-1 py-3 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {importLoading ? 'Importing…' : 'Import to vault'}
+                </button>
+              </div>
+            </div>
+          </motion.div>
         </div>
       )}
-
-      {/* Rename Modal */}
-      {showRenameModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h2 className="text-xl font-bold mb-4">Rename Item</h2>
-            <input
-              type="text"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4"
-            />
-            <div className="flex gap-2">
-              <button
-                onClick={submitRename}
-                className="flex-1 bg-black text-white py-2 rounded-lg"
-              >
-                Rename
-              </button>
-              <button
-                onClick={() => setShowRenameModal(false)}
-                className="flex-1 border border-gray-300 py-2 rounded-lg"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* View Item Modal */}
-      {selectedItem && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b px-4 py-3 flex justify-between items-center">
-              <h2 className="text-lg font-bold">View Item</h2>
-              <button
-                onClick={() => setSelectedItem(null)}
-                className="text-gray-600 hover:text-gray-900 text-2xl"
-              >
-                ×
-              </button>
-            </div>
-            <div className="p-4">
-              {selectedItem.type === 'note' && (
-                <>
-                  <h3 className="text-xl font-bold mb-4">{selectedItem.name}</h3>
-                  <div className="whitespace-pre-wrap text-gray-700">{selectedItem.content}</div>
-                </>
-              )}
-              {selectedItem.type === 'image' && (
-                <>
-                  <h3 className="text-xl font-bold mb-4">{selectedItem.name}</h3>
-                  <img 
-                    src={`http://localhost:5000${selectedItem.filePath}`} 
-                    alt={selectedItem.name}
-                    className="w-full h-auto rounded-lg"
-                  />
-                </>
-              )}
-              {selectedItem.type === 'pdf' && (
-                <>
-                  <h3 className="text-xl font-bold mb-4">{selectedItem.name}</h3>
-                  <iframe
-                    src={`http://localhost:5000${selectedItem.filePath}`}
-                    className="w-full h-96 border rounded-lg"
-                    title={selectedItem.name}
-                  />
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+    </PageShell>
   );
 };
 

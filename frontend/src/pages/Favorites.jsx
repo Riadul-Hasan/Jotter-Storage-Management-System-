@@ -1,215 +1,244 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-toastify';
-import Header from '../components/Header';
-import BottomNav from '../components/BottomNav';
+import { Heart, Sparkles, FolderOpen, FileText, Image as ImageIcon, StickyNote, ArrowUpDown, Plus } from 'lucide-react';
+import PageShell from '../components/PageShell';
 import ItemCard from '../components/ItemCard';
+import useItemActions from '../hooks/useItemActions';
+import { ListSkeleton, EmptyState } from '../components/Skeletons';
 import api from '../api/axios';
-import { FaDownload } from 'react-icons/fa';
+import { cx } from '../utils/format';
+import { CreateItemDialog } from '../components/Dialogs';
+
+const FILTERS = [
+  { key: 'all', label: 'Everything', icon: Sparkles },
+  { key: 'note', label: 'Notes', icon: StickyNote },
+  { key: 'image', label: 'Images', icon: ImageIcon },
+  { key: 'pdf', label: 'PDFs', icon: FileText },
+  { key: 'folder', label: 'Folders', icon: FolderOpen },
+];
 
 const Favorites = () => {
-    const [items, setItems] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [selectedItem, setSelectedItem] = useState(null);
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [sort, setSort] = useState('newest');
+  const [createOpen, setCreateOpen] = useState(false);
 
-    useEffect(() => {
-        fetchFavorites();
-    }, []);
-
-    const fetchFavorites = async () => {
-        try {
-            const response = await api.get('/items?favorite=true');
-            setItems(response.data.items);
-        } catch (error) {
-            toast.error('Failed to load favorites');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleDownload = async (item) => {
-        try {
-            const response = await fetch(`http://localhost:5000${item.filePath}`);
-            const blob = await response.blob();
-
-            const extension = item.filePath.split('.').pop();
-            const fileName = `${item.name}.${extension}`;
-
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = fileName;
-            document.body.appendChild(link);
-            link.click();
-
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(url);
-
-            toast.success('Download started!');
-        } catch (error) {
-            toast.error('Failed to download');
-            console.error('Download error:', error);
-        }
-    };
-
-    const handleFavorite = async (item) => {
-        try {
-            await api.patch(`/items/${item._id}/favorite`);
-            toast.success('Removed from favorites');
-            fetchFavorites();
-        } catch (error) {
-            toast.error('Failed to update');
-        }
-    };
-
-    const handleDelete = async (item) => {
-        if (!window.confirm(`Delete "${item.name}"?`)) return;
-        try {
-            await api.delete(`/items/${item._id}`);
-            toast.success('Item deleted');
-            fetchFavorites();
-        } catch (error) {
-            toast.error('Failed to delete');
-        }
-    };
-
-    const handleCopy = async (item) => {
-        try {
-            let textToCopy = `Name: ${item.name}\nType: ${item.type}`;
-            if (item.type === 'note' && item.content) {
-                textToCopy += `\n\n${item.content}`;
-            }
-            await navigator.clipboard.writeText(textToCopy);
-            toast.success('Copied to clipboard!');
-        } catch (error) {
-            toast.error('Failed to copy');
-        }
-    };
-
-    const handleItemClick = (item) => {
-        // Only open modal for viewable items (not folders)
-        if (item.type !== 'folder') {
-            setSelectedItem(item);
-        }
-    };
-
-    // Helper function for download URLs
-    const getDownloadUrl = (item) => {
-        return `http://localhost:5000${item.filePath}`;
-    };
-
-    // Helper function for download filename
-    const getDownloadFilename = (item) => {
-        const extension = item.filePath.split('.').pop();
-        return `${item.name}.${extension}`;
-    };
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
-            </div>
-        );
+  const fetchFavorites = useCallback(async () => {
+    try {
+      const res = await api.get('/items?favorite=true');
+      setItems(res.data.items || []);
+    } catch {
+      toast.error('Could not load favourites');
+    } finally {
+      setLoading(false);
     }
+  }, []);
 
-    return (
-        <div className="min-h-screen bg-gray-50 pb-20">
-            <Header title="Favorites" />
+  const { actions, dialogs } = useItemActions(fetchFavorites);
 
-            <div className="p-4 space-y-2">
-                {items.map(item => (
-                    <ItemCard
-                        key={item._id}
-                        item={item}
-                        onClick={handleItemClick}
-                        onFavorite={handleFavorite}
-                        onCopy={handleCopy}
-                        onRename={() => { }}
-                        onDuplicate={() => { }}
-                        onDelete={handleDelete}
-                        onShare={() => { }}
-                        onLock={() => { }}
-                    />
-                ))}
-                {items.length === 0 && (
-                    <div className="text-center py-12">
-                        <p className="text-gray-500 text-lg">No favorites yet</p>
-                        <p className="text-gray-400 text-sm mt-2">
-                            Tap the ♡ icon on any item to add it to favorites
-                        </p>
-                    </div>
-                )}
-            </div>
-
-            <BottomNav />
-
-            {/* View Item Modal */}
-            {selectedItem && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-                        <div className="sticky top-0 bg-white border-b px-4 py-3 flex justify-between items-center">
-                            <h2 className="text-lg font-bold">{selectedItem.name}</h2>
-                            <button
-                                onClick={() => setSelectedItem(null)}
-                                className="text-gray-600 hover:text-gray-900 text-2xl"
-                            >
-                                ×
-                            </button>
-                        </div>
-                        <div className="p-4">
-                            {/* Note View */}
-                            {selectedItem.type === 'note' && (
-                                <>
-                                    <div className="whitespace-pre-wrap text-gray-700 leading-relaxed mb-4">
-                                        {selectedItem.content}
-                                    </div>
-                                    <button
-                                        onClick={() => handleCopy(selectedItem)}
-                                        className="w-full flex items-center gap-2 justify-center bg-black text-white py-2 px-4 rounded-lg hover:bg-gray-800"
-                                    >
-                                        Copy Content
-                                    </button>
-                                </>
-                            )}
-
-                            {/* Image View */}
-                            {selectedItem.type === 'image' && (
-                                <>
-                                    <img
-                                        src={getDownloadUrl(selectedItem)}
-                                        alt={selectedItem.name}
-                                        className="w-full h-auto rounded-lg mb-4"
-                                    />
-                                    <button
-                                        onClick={() => handleDownload(selectedItem)}
-                                        className="w-full flex items-center gap-2 justify-center bg-black text-white py-2 px-4 rounded-lg hover:bg-gray-800"
-                                    >
-                                        <FaDownload /> Download Image
-                                    </button>
-                                </>
-                            )}
-
-                            {/* PDF View */}
-                            {selectedItem.type === 'pdf' && (
-                                <>
-                                    <iframe
-                                        src={getDownloadUrl(selectedItem)}
-                                        className="w-full h-[600px] border rounded-lg mb-4"
-                                        title={selectedItem.name}
-                                    />
-                                    <button
-                                        onClick={() => handleDownload(selectedItem)}
-                                        className="w-full flex items-center gap-2 justify-center bg-black text-white py-2 px-4 rounded-lg hover:bg-gray-800"
-                                    >
-                                        <FaDownload /> Download PDF
-                                    </button>
-                                </>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
-        </div>
+  const counts = useMemo(() => {
+    return items.reduce(
+      (acc, item) => {
+        acc[item.type] = (acc[item.type] || 0) + 1;
+        return acc;
+      },
+      { note: 0, image: 0, pdf: 0, folder: 0 }
     );
+  }, [items]);
+
+
+  useEffect(() => {
+    fetchFavorites();
+  }, [fetchFavorites]);
+
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    let list = items;
+    if (filter !== 'all') list = list.filter((i) => i.type === filter);
+    if (q) list = list.filter((i) => i.name?.toLowerCase().includes(q));
+    return [...list].sort((a, b) =>
+      sort === 'newest'
+        ? new Date(b.createdAt) - new Date(a.createdAt)
+        : (a.name || '').localeCompare(b.name || '')
+    );
+  }, [items, filter, query, sort]);
+
+  const createItem = async ({ type, name, content, file }) => {
+    try {
+      if (file) {
+        const fd = new FormData();
+        fd.append('type', type);
+        fd.append('name', name);
+        fd.append('file', file);
+        await api.post('/items', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      } else {
+        await api.post('/items', { type, name, content });
+      }
+      toast.success('Created');
+      setCreateOpen(false);
+      fetchFavorites();
+    } catch (e) {
+      toast.error(e?.response?.data?.message || 'Could not create item');
+    }
+  };
+
+  return (
+    <PageShell
+      title="Favourites"
+      subtitle="Everything you starred, kept in one warm place"
+      accent="rose"
+      showSearch
+      onSearch={setQuery}
+      onAddClick={() => setCreateOpen(true)}
+    >
+      {/* ---------- hero banner ---------- */}
+      <motion.section
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.55 }}
+        className="relative overflow-hidden rounded-[32px] border border-white/60 bg-gradient-to-br from-brand-rose via-pink-500 to-brand-grape p-6 text-white shadow-warm-lg sm:p-8"
+      >
+        <div className="absolute -right-16 -top-20 h-64 w-64 rounded-full bg-white/20 blur-3xl" />
+        <div className="absolute -bottom-24 left-10 h-56 w-56 rounded-full bg-brand-sun/30 blur-3xl" />
+        <div className="relative flex flex-wrap items-end justify-between gap-6">
+          <div>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em]">
+              <Heart size={12} className="fill-white" /> Starred
+            </span>
+            <h2 className="mt-3 font-display text-4xl font-extrabold tracking-tight sm:text-5xl">
+              {items.length}
+              <span className="ml-2 text-lg font-semibold text-white/80">
+                item{items.length === 1 ? '' : 's'} you love
+              </span>
+            </h2>
+            <p className="mt-1.5 max-w-md text-sm text-white/85">
+              Unstar anything with a single tap and it slides right back into your library.
+            </p>
+          </div>
+
+          <div className="flex gap-2">
+            {[
+              { label: 'Notes', value: counts.note, icon: StickyNote },
+              { label: 'Images', value: counts.image, icon: ImageIcon },
+              { label: 'PDFs', value: counts.pdf, icon: FileText },
+            ].map((s) => (
+              <motion.div
+                key={s.label}
+                whileHover={{ y: -4 }}
+                className="rounded-2xl border border-white/25 bg-white/15 px-3.5 py-2.5 text-center backdrop-blur-md"
+              >
+                <s.icon size={15} className="mx-auto mb-1" />
+                <p className="text-lg font-extrabold leading-none">{s.value}</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-white/75">{s.label}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </motion.section>
+
+      {/* ---------- filters ---------- */}
+      <div className="mt-6 flex flex-wrap items-center gap-2">
+        {FILTERS.map((f) => (
+          <button
+            key={f.key}
+            type="button"
+            onClick={() => setFilter(f.key)}
+            className={cx('relative', filter === f.key && 'text-white')}
+          >
+            {filter === f.key && (
+              <motion.span
+                layoutId="fav-chip"
+                transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+                className="absolute inset-0 rounded-full bg-gradient-to-r from-brand-rose to-brand-grape shadow-[0_8px_20px_rgba(244,63,94,0.3)]"
+              />
+            )}
+            <span
+              className={cx(
+                'relative flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-bold transition',
+                filter === f.key
+                  ? 'border-transparent'
+                  : 'border-cream-300 bg-white/80 text-ink-600 hover:border-cream-400'
+              )}
+            >
+              <f.icon size={13} />
+              {f.label}
+              <span
+                className={cx(
+                  'rounded-full px-1.5 text-[10px]',
+                  filter === f.key ? 'bg-white/25 text-white' : 'bg-cream-100 text-ink-500'
+                )}
+              >
+                {counts[f.key]}
+              </span>
+            </span>
+          </button>
+        ))}
+
+        <button
+          type="button"
+          onClick={() => setSort((s) => (s === 'newest' ? 'name' : 'newest'))}
+          className="ml-auto flex items-center gap-1.5 rounded-full border border-cream-300 bg-white/80 px-3.5 py-1.5 text-xs font-bold text-ink-600 transition hover:border-cream-400"
+        >
+          <ArrowUpDown size={13} />
+          {sort === 'newest' ? 'Newest' : 'A → Z'}
+        </button>
+      </div>
+
+      {/* ---------- list ---------- */}
+      <div className="mt-5">
+        {loading ? (
+          <ListSkeleton rows={4} />
+        ) : visible.length === 0 ? (
+          <EmptyState
+            icon={Heart}
+            tone="rose"
+            title={items.length === 0 ? 'No favourites yet' : 'Nothing matches that'}
+            text={
+              items.length === 0
+                ? 'Tap the heart on any item in your library and it will show up here instantly.'
+                : 'Try a different search or filter — your starred items are still safe.'
+            }
+          />
+        ) : (
+          <div className="grid gap-3.5 md:grid-cols-2">
+            <AnimatePresence mode="popLayout">
+              {visible.map((item, i) => (
+                <ItemCard
+                  key={item._id}
+                  item={item}
+                  index={i}
+                  onClick={actions.view}
+                  onFavorite={actions.toggleFavorite}
+                  onCopy={actions.copy}
+                  onRename={actions.rename}
+                  onDuplicate={actions.duplicate}
+                  onDelete={actions.remove}
+                  onShare={actions.share}
+                  onLock={actions.lockFolder}
+                  onSecure={actions.secureItem}
+                />
+              ))}
+            </AnimatePresence>
+          </div>
+        )}
+      </div>
+
+       {dialogs}
+       <CreateItemDialog
+         open={createOpen}
+         title="New item"
+         subtitle="Note, image, PDF or folder — pick a type and give it a name."
+         types={['note', 'image', 'pdf', 'folder']}
+         defaultType="note"
+         onSubmit={createItem}
+         onCancel={() => setCreateOpen(false)}
+       />
+     </PageShell>
+
+  );
 };
 
 export default Favorites;

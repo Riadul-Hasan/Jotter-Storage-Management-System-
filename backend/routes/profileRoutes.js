@@ -2,13 +2,19 @@ const express = require("express");
 const router = express.Router();
 const multer = require("multer");
 const path = require("path");
+const fs = require("fs");
 const profileController = require("../controllers/profileController");
 const auth = require("../middleware/auth");
+
+// Absolute destination — independent of the process working directory, so
+// avatars always land in backend/uploads and survive restarts/logins.
+const UPLOADS_DIR = path.join(__dirname, "..", "uploads");
+fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 // Configure multer for avatar uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/");
+    cb(null, UPLOADS_DIR);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
