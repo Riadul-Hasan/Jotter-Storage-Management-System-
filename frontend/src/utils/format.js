@@ -9,7 +9,13 @@ import {
 export const API_BASE = 'http://localhost:5000';
 export const EASE = [0.16, 1, 0.3, 1];
 
-/** Build a fully-qualified avatar URL (handles relative /uploads paths). */
+/**
+ * Build a fully-qualified avatar URL (handles relative /uploads paths).
+ *
+ * Uploaded avatars always get a unique filename (timestamp + random), so the
+ * URL itself changes on every upload and the browser can never serve a stale
+ * picture for a new avatar.
+ */
 export const avatarUrl = (avatar = '') => {
   if (!avatar) return '';
   if (avatar.startsWith('http://') || avatar.startsWith('https://')) return avatar;

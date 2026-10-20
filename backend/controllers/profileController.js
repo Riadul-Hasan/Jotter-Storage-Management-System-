@@ -57,7 +57,11 @@ exports.updateProfile = async (req, res) => {
       if (user.avatar) {
         const oldAvatarPath = path.join(__dirname, "..", user.avatar);
         if (fs.existsSync(oldAvatarPath)) {
-          fs.unlinkSync(oldAvatarPath);
+          try {
+            fs.unlinkSync(oldAvatarPath);
+          } catch (e) {
+            console.error("Error deleting old avatar:", e);
+          }
         }
       }
       user.avatar = `/uploads/${req.file.filename}`;

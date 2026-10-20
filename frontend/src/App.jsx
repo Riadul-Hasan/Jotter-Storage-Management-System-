@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import ProtectedRoute from './components/ProtectedRoute';
+import { AuthProvider } from './context/AuthContext';
 import Landing from './pages/Landing';
 import Signup from './pages/Signup';
 import Login from './pages/Login';
@@ -27,6 +28,7 @@ import AllItems from './pages/AllItems';
 function App() {
   return (
     <Router>
+      <AuthProvider>
       <div className="App">
         <Routes>
 
@@ -175,6 +177,7 @@ function App() {
           theme="light"
         />
       </div>
+      </AuthProvider>
     </Router>
   );
 }

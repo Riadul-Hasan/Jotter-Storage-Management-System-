@@ -85,10 +85,15 @@ exports.unlockFolder = async (req, res) => {
     // the folder immediately without a second round-trip.
     const items = await Item.find({ parentFolder: id, userId }).sort({ createdAt: -1 });
 
+    // Never send the password HASH to the client — expose a boolean instead.
+    const folderObj = folder.toObject();
+    delete folderObj.password;
+    folderObj.isLocked = false;
+
     res.json({
       success: true,
       message: 'Folder unlocked successfully',
-      folder,
+      folder: folderObj,
       items,
       isLocked: false,
     });
@@ -134,6 +139,10 @@ exports.removeLock = async (req, res) => {
     }
 
     folder.password = null;
+    // The vault flag must be cleared too — otherwise the folder keeps
+    // `isLocked: true` and stays hidden in the vault forever, with no
+    // password left to unlock it (a dead end).
+    folder.isLocked = false;
     await folder.save();
 
     res.json({
@@ -185,6 +194,9 @@ exports.getFolderContents = async (req, res) => {
           type: folder.type,
           createdAt: folder.createdAt,
           updatedAt: folder.updatedAt,
+          // The client renders the unlock prompt based on `folder.isLocked`,
+          // so the flag MUST be present on the folder object itself.
+          isLocked: true,
         },
         items: null,
         isLocked: true,

@@ -9,6 +9,7 @@ import {
 import PageShell from '../components/PageShell';
 import api from '../api/axios';
 import { cx, formatBytes, formatDate, avatarUrl } from '../utils/format';
+import { useAuth } from '../context/AuthContext';
 import { EmptyState } from '../components/Skeletons';
 import { PromptDialog, PasswordDialog } from '../components/Dialogs';
 
@@ -21,6 +22,7 @@ const STATS = [
 
 const Profile = () => {
   const navigate = useNavigate();
+  const { patchUser } = useAuth();
   const [user, setUser] = useState(null);
   const [stats, setStats] = useState(null);
   const [recentItems, setRecentItems] = useState([]);
@@ -84,24 +86,53 @@ const Profile = () => {
   const pct = Math.min(100, Math.round((used / total) * 100));
 
   const handleAvatar = async (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
+    const input = e.target;
+    const file = input.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
       toast.error('Please select an image');
+      input.value = '';
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
       toast.error('Profile picture must be 5 MB or smaller');
+      input.value = '';
       return;
     }
 
-    const previewUrl = URL.createObjectURL(file);
+    // Copy the bytes out of the file input BEFORE the input is reset.
+    //
+    // Clearing `input.value` (or otherwise detaching the selection) makes
+    // Chrome invalidate the blob that backs the `File`. Both the preview
+    // <img> and the multipart XHR then fail with
+    // `net::ERR_BLOB_REFERENCED_FILE_UNAVAILABLE` / `net::ERR_ACCESS_DENIED`
+    // and the upload silently never reaches the server. Reading the bytes
+    // into memory first gives us an independent, upload-safe copy.
+    let uploadFile = file;
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      uploadFile = new File([bytes], file.name, {
+        type: file.type || 'image/png',
+        lastModified: file.lastModified || Date.now(),
+      });
+    } catch {
+      // Fall back to the original file if the bytes cannot be read.
+      uploadFile = file;
+    }
+
+    const previewUrl = URL.createObjectURL(uploadFile);
     setAvatarFailed(false);
     setAvatarPreview(previewUrl);
-    await saveProfile(editName, file);
+
+    try {
+      await saveProfile(editName, uploadFile);
+    } finally {
+      // Reset the input last, so choosing the very same file again still
+      // fires a change event.
+      input.value = '';
+    }
   };
 
   const saveProfile = async (nameOverride, avatarOverride) => {
@@ -119,9 +150,18 @@ const Profile = () => {
       const res = await api.put('/profile', form);
       toast.success(res.data.message || 'Profile updated');
       setEditName(nameToSave);
-      // Keep the preview until the fetchProfile update is complete
-      await fetchProfile();
+      
+      // Merge the server response into the shared auth state so the header
+      // avatar updates immediately — without a page reload.
+      if (res.data.user) {
+        patchUser(res.data.user);
+        setUser((prev) => ({ ...prev, ...res.data.user }));
+      }
+
+      // The new picture is a fresh URL, so clear any previous load failure.
+      setAvatarFailed(false);
       setAvatarPreview(null);
+      await fetchProfile();
     } catch (e) {
       setAvatarPreview(null);
       toast.error(e?.response?.data?.message || 'Update failed');
@@ -133,7 +173,13 @@ const Profile = () => {
     if (cp.new.length < 6) { setPwError('Password must be 6+ characters'); return; }
     setPwLoading(true);
     try {
-      await api.post('/profile/change-password', cp);
+      // The API expects `currentPassword` / `newPassword` / `confirmPassword`
+      // — sending the local `cp` shape directly always failed with a 400.
+      await api.post('/profile/change-password', {
+        currentPassword: cp.current,
+        newPassword: cp.new,
+        confirmPassword: cp.confirm,
+      });
       toast.success('Password changed');
       setCP({ current: '', new: '', confirm: '' });
       setPwOpen(false);

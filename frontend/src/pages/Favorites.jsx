@@ -73,7 +73,10 @@ const Favorites = () => {
         fd.append('type', type);
         fd.append('name', name);
         fd.append('file', file);
-        await api.post('/items', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+        // No manual Content-Type here: Axios/the browser must add the
+        // multipart header WITH its boundary, otherwise Multer cannot parse
+        // the body and the upload fails.
+        await api.post('/items', fd);
       } else {
         await api.post('/items', { type, name, content });
       }

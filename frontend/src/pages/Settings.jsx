@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import { User, Lock, Bell, Palette, Shield, Trash2, LogOut, ArrowRight, Mail, Phone, KeyRound, ShieldCheck } from 'lucide-react';
 import PageShell from '../components/PageShell';
 import api from '../api/axios';
+import { useAuth } from '../context/AuthContext';
 import { cx } from '../utils/format';
 
 const SETTINGS = [
@@ -20,6 +21,7 @@ const SETTINGS = [
 
 const Settings = () => {
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const [active, setActive] = useState(null);
   const [resetOpen, setResetOpen] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
@@ -28,9 +30,9 @@ const Settings = () => {
 
   const handleSignout = async () => {
     try {
-      await api.post('/auth/logout');
+      await logout();
       toast.success('Logged out — see you soon!');
-      window.location.href = '/login';
+      navigate('/login');
     } catch {
       toast.error('Logout failed');
     }

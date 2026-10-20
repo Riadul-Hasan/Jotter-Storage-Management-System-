@@ -226,9 +226,11 @@ import { gsap } from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { HiMail, HiLockClosed, HiArrowRight, HiSparkles, HiShieldCheck } from 'react-icons/hi';
 import api from '../api/axios';
+import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
   const navigate = useNavigate();
+  const { refreshUser } = useAuth();
   const containerRef = useRef(null);
   const cardRef = useRef(null);
   const brandingRef = useRef(null);
@@ -284,6 +286,9 @@ const Login = () => {
     try {
       const response = await api.post('/auth/login', formData);
       if (response.data.success) {
+        // Pull the fresh user into the shared auth state so the header
+        // avatar/name is correct immediately (not only after a reload).
+        await refreshUser();
         toast.success('Access Granted');
         navigate('/home');
       }

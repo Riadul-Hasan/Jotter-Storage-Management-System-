@@ -17,7 +17,8 @@ import {
   Mail,
 } from 'lucide-react';
 import api from '../api/axios';
-import { cx, EASE } from '../utils/format';
+import { cx, EASE, avatarUrl } from '../utils/format';
+import { useAuth } from '../context/AuthContext';
 import { PasswordDialog } from './Dialogs';
 
 const ACCENTS = {
@@ -49,6 +50,11 @@ const Header = ({
   const [resetPurpose, setResetPurpose] = useState('account');
   const location = useLocation();
 
+  // The signed-in user (shared, live) — keeps the header avatar in sync with
+  // profile updates without a reload.
+  const { user, logout } = useAuth();
+  const avatarSrc = user?.avatar ? avatarUrl(user.avatar) : '';
+
   useEffect(() => {
     let alive = true;
     api
@@ -73,7 +79,7 @@ const Header = ({
   const handleLogout = async () => {
     setMenuOpen(false);
     try {
-      await api.post('/auth/logout');
+      await logout();
       toast.success('Logged out — see you soon!');
       navigate('/login');
     } catch {
@@ -186,6 +192,30 @@ const Header = ({
                 className="grid h-10 w-10 place-items-center rounded-2xl border border-cream-200 bg-white/80 text-ink-600 transition hover:border-brand-coral/40 hover:text-brand-coral"
               >
                 {hasLockPassword ? <KeyRound size={17} /> : <Lock size={17} />}
+              </motion.button>
+
+              {/* Avatar — reflects the shared user state, so a new profile
+                  picture shows up here the moment it is uploaded. */}
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.06 }}
+                whileTap={{ scale: 0.94 }}
+                onClick={() => { setMenuOpen(false); navigate('/profile'); }}
+                aria-label="Open profile"
+                title={user?.username ? `Profile — ${user.username}` : 'Profile'}
+                className="grid h-10 w-10 place-items-center overflow-hidden rounded-2xl border border-cream-200 bg-white/80"
+              >
+                {avatarSrc ? (
+                  <img
+                    src={avatarSrc}
+                    alt={user?.username ? `${user.username} avatar` : 'Avatar'}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span className="grid h-full w-full place-items-center text-ink-500">
+                    <User size={17} />
+                  </span>
+                )}
               </motion.button>
 
               <div className="relative" ref={menuRef}>

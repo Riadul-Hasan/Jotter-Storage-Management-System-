@@ -8,6 +8,7 @@ import PageShell from '../components/PageShell';
 import ItemCard from '../components/ItemCard';
 import useItemActions from '../hooks/useItemActions';
 import { cx, EASE, formatBytes, relTime, metaFor, initialsOf } from '../utils/format';
+import { useAuth } from '../context/AuthContext';
 import { EmptyState, ListSkeleton, Stagger } from '../components/Skeletons';
 import { CreateItemDialog, ConfirmDialog, PasswordDialog } from '../components/Dialogs';
 
@@ -92,7 +93,7 @@ const Home = () => {
   const [statsLoading, setStatsLoading] = useState(true);
   const [recentLoading, setRecentLoading] = useState(true);
   const [query, setQuery] = useState('');
-  const [userName, setUserName] = useState('');
+  const { user: authUser } = useAuth();
   const [createOpen, setCreateOpen] = useState(false);
   const [tipIdx, setTipIdx] = useState(0);
 
@@ -117,12 +118,6 @@ const Home = () => {
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
   useEffect(() => {
-    api.get('/auth/me').then((res) => {
-      setUserName(res.data?.user?.name || '');
-    }).catch(() => {});
-  }, []);
-
-  useEffect(() => {
     const t = setInterval(() => setTipIdx((i) => (i + 1) % TIPS.length), 5000);
     return () => clearInterval(t);
   }, []);
@@ -141,7 +136,7 @@ const Home = () => {
   const total = stats?.totalStorage || 15 * 1024 * 1024 * 1024;
   const pct = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;
 
-  const firstName = (userName || 'there').split(' ')[0];
+  const firstName = (authUser?.username || 'there').split(' ')[0];
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
 
@@ -152,7 +147,10 @@ const Home = () => {
         fd.append('type', type);
         fd.append('name', name);
         fd.append('file', file);
-        await api.post('/items', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+        // No manual Content-Type here: Axios/the browser must add the
+        // multipart header WITH its boundary, otherwise Multer cannot parse
+        // the body and the upload fails.
+        await api.post('/items', fd);
       } else {
         await api.post('/items', { type, name, content });
       }
