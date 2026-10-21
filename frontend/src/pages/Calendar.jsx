@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-toastify';
 import {
@@ -18,6 +19,7 @@ import api from '../api/axios';
 import { cx, dayKey, formatDate, relTime, metaFor } from '../utils/format';
 import { EmptyState, ListSkeleton } from '../components/Skeletons';
 import { ConfirmDialog, CreateItemDialog } from '../components/Dialogs';
+import useItemActions from '../hooks/useItemActions';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = [
@@ -33,6 +35,7 @@ const TYPE_ICON = {
 };
 
 const Calendar = () => {
+  const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewDate, setViewDate] = useState(new Date());
@@ -81,6 +84,8 @@ const Calendar = () => {
   const prevMonth = () => setViewDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1));
   const nextMonth = () => setViewDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1));
   const goToday = () => setViewDate(new Date());
+
+  const { actions, dialogs } = useItemActions(fetchItems);
 
   const removeItem = (id) => {
     api.delete(`/items/${id}`)
@@ -199,7 +204,8 @@ const Calendar = () => {
                       key={it._id}
                       initial={{ opacity: 0, x: -12 }}
                       animate={{ opacity: 1, x: 0 }}
-                      className="flex items-center gap-2.5 rounded-2xl border border-cream-200 bg-white/70 px-3 py-2"
+                      className="flex items-center gap-2.5 rounded-2xl border border-cream-200 bg-white/70 px-3 py-2 cursor-pointer hover:bg-white transition-colors"
+                      onClick={() => actions.view(it)}
                     >
                       <div className="grid h-8 w-8 place-items-center rounded-xl text-white" style={{ background: metaFor(it.type).solid }}>
                         <Icon size={14} strokeWidth={2} />
@@ -208,7 +214,7 @@ const Calendar = () => {
                         <h4 className="truncate text-sm font-bold text-ink-900">{it.name}</h4>
                         <p className="truncate text-[11.5px] text-ink-500">{relTime(it.createdAt)} · {metaFor(it.type).label}</p>
                       </div>
-                      <button type="button" onClick={() => { setConfirm({ open: true, item: it }); }} className="p-1.5 rounded-full text-ink-400 hover:bg-rose-50 hover:text-rose-600 transition"><X size={14} /></button>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); setConfirm({ open: true, item: it }); }} className="p-1.5 rounded-full text-ink-400 hover:bg-rose-50 hover:text-rose-600 transition"><X size={14} /></button>
                     </motion.div>
                   );
                 })}
@@ -237,6 +243,7 @@ const Calendar = () => {
         onSubmit={createItem}
         onCancel={() => setCreateOpen(false)}
       />
+      {dialogs}
     </PageShell>
   );
 };

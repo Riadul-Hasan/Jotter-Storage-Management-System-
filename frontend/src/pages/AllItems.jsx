@@ -77,10 +77,10 @@ const AllItems = () => {
     const total = items.length;
     return {
       all: total,
-      notes: items.filter((i) => i.type === 'note').length,
-      images: items.filter((i) => i.type === 'image').length,
-      pdfs: items.filter((i) => i.type === 'pdf').length,
-      folders: items.filter((i) => i.type === 'folder').length,
+      note: items.filter((i) => i.type === 'note').length,
+      image: items.filter((i) => i.type === 'image').length,
+      pdf: items.filter((i) => i.type === 'pdf').length,
+      folder: items.filter((i) => i.type === 'folder').length,
     };
   }, [items]);
 

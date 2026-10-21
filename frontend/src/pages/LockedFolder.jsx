@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { forwardRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-toastify';
 import {
@@ -27,7 +28,7 @@ const categoryLabel = (type) => {
   return labels[type] || type;
 };
 
-const VaultItem = ({ item, index, onRemoveLock, list, onClick }) => {
+const VaultItem = forwardRef(({ item, index, onRemoveLock, list, onClick }, ref) => {
   const [unlockOpen, setUnlockOpen] = useState(false);
   const [unlockPwd, setUnlockPwd] = useState('');
   const [unlockError, setUnlockError] = useState('');
@@ -49,6 +50,7 @@ const VaultItem = ({ item, index, onRemoveLock, list, onClick }) => {
 
   return (
     <motion.div
+      ref={ref}
       layout
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
@@ -93,16 +95,61 @@ const VaultItem = ({ item, index, onRemoveLock, list, onClick }) => {
       )}
     </motion.div>
   );
-};
+});
 
 const LockedFolder = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const isExitingRef = useRef(false);
+  const prevPathRef = useRef(location.pathname);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [stage, setStage] = useState('checking');
+  useEffect(() => {
+    if (stage !== 'open') {
+      prevPathRef.current = location.pathname;
+      return;
+    }
+    if (location.pathname !== prevPathRef.current) {
+      setPendingTarget(location.pathname);
+      setShowExitConfirm(true);
+      navigate(prevPathRef.current, { replace: true });
+    }
+  }, [location.pathname, stage, navigate]);
+  useEffect(() => {
+    if (stage !== 'open') return;
+    const origPush = window.history.pushState.bind(window.history);
+    const origReplace = window.history.replaceState.bind(window.history);
+    const handleNav = (url) => {
+      if (isExitingRef.current) return false;
+      const path = typeof url === 'string' ? url : (url && url.pathname) || '';
+      const target = path.split('?')[0];
+      if (!target || target === location.pathname) return false;
+      
+      setPendingTarget(target);
+      setShowExitConfirm(true);
+      
+      // Prevent the navigation from actually happening by not calling the original state method
+      return true;
+    };
+    window.history.pushState = (state, title, url) => {
+      if (handleNav(url)) return; 
+      return origPush(state, title, url);
+    };
+    window.history.replaceState = (state, title, url) => {
+      if (handleNav(url)) return;
+      return origReplace(state, title, url);
+    };
+    return () => {
+      window.history.pushState = origPush;
+      window.history.replaceState = origReplace;
+    };
+  }, [stage, location.pathname]);
   const [pwError, setPwError] = useState('');
   const [pwLoading, setPwLoading] = useState(false);
   const [view, setView] = useState('grid');
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [pendingTarget, setPendingTarget] = useState('/home');
 
   const fetchLocked = useCallback(async () => {
     try {
@@ -120,6 +167,27 @@ const LockedFolder = () => {
   const removeLock = useCallback(() => {
     fetchLocked();
   }, [fetchLocked]);
+
+  const handleNavigate = (targetPath) => {
+    if (stage === 'open') {
+      setPendingTarget(targetPath || '/home');
+      setShowExitConfirm(true);
+    } else {
+      navigate(targetPath);
+    }
+  };
+
+  const confirmExit = () => {
+    const target = pendingTarget || '/home';
+    setShowExitConfirm(false);
+    isExitingRef.current = true;
+    prevPathRef.current = target;
+    navigate(target, { replace: true });
+  };
+
+  const cancelExit = () => {
+    setShowExitConfirm(false);
+  };
 
   /* ---------- Import-to-vault ---------- */
   const [importOpen, setImportOpen] = useState(false);
@@ -178,14 +246,9 @@ const LockedFolder = () => {
 
   useEffect(() => { fetchLibrary(); }, [fetchLibrary]);
 
-  // `location` is stable within a mount, so this runs once when the vault
-  // route is entered (including when arriving from Profile after a successful
-  // password verification).
   useEffect(() => {
     let alive = true;
     if (location.state?.unlockFromProfile) {
-      // The user just verified their vault password on the Profile page.
-      // Land directly in the vault without prompting again.
       if (alive) setStage('open');
       return;
     }
@@ -276,15 +339,53 @@ const LockedFolder = () => {
         error={pwError}
         loading={pwLoading}
         onSubmit={submitVault}
-        onCancel={() => setPwError('')}
+        onCancel={() => { setPwError(''); navigate('/home'); }}
+        onForgot={() => { setPwError(''); setStage('setup'); }}
       />
+
+      {/* Exit Confirmation Dialog */}
+      <AnimatePresence>
+        {showExitConfirm && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white rounded-[32px] p-8 max-w-sm w-full shadow-2xl border border-cream-200 text-center"
+            >
+              <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Lock size={32} />
+              </div>
+              <h3 className="text-xl font-display font-bold text-ink-900 mb-2">Terminate Session?</h3>
+              <p className="text-ink-500 text-sm mb-6">
+                Are you sure to terminate session for your secure folder?
+              </p>
+              <div className="flex gap-3">
+                <button 
+                  onClick={cancelExit} 
+                  className="flex-1 py-3 rounded-2xl font-bold text-ink-600 bg-cream-100 hover:bg-cream-200 transition"
+                >
+                  No
+
+                </button>
+                <button 
+                  onClick={confirmExit} 
+                  className="flex-1 py-3 rounded-2xl font-bold text-white bg-ink-900 hover:bg-ink-800 transition"
+                >
+                  Yes
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* ---------- Import-to-vault dialog ---------- */}
       {importOpen && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/30 p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
+            animate={{ opacity: 1, scale: 0.95 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.2 }}
             className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-[28px] border border-cream-200 bg-white shadow-warm-xl"
@@ -385,8 +486,8 @@ const LockedFolder = () => {
               {selectedIds.size > 0 && (
                 <>
                   <div className="flex items-center gap-2 rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-[12px] text-rose-700">
-                    <Lock size={14} className="shrink-0" />
-                    Enter your vault password to import these items.
+                      <Lock size={14} className="shrink-0" />
+                      Enter your vault password to import these items.
                   </div>
                   <input
                     type="password"

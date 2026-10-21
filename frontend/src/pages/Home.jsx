@@ -125,13 +125,13 @@ const Home = () => {
   const { actions, dialogs } = useItemActions(fetchAll);
 
   const counts = useMemo(() => ({
-    notes: stats?.notes?.count || 0,
-    images: stats?.images?.count || 0,
-    pdfs: stats?.pdfs?.count || 0,
-    folders: stats?.folders?.count || 0,
+    note: stats?.notes?.count || 0,
+    image: stats?.images?.count || 0,
+    pdf: stats?.pdfs?.count || 0,
+    folder: stats?.folders?.count || 0,
   }), [stats]);
 
-  const totalItems = counts.notes + counts.images + counts.pdfs + counts.folders;
+  const totalItems = counts.note + counts.image + counts.pdf + counts.folder;
   const used = stats?.usedStorage || 0;
   const total = stats?.totalStorage || 15 * 1024 * 1024 * 1024;
   const pct = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;
@@ -221,8 +221,8 @@ const Home = () => {
         </div>
         <p className="mt-2 text-center text-sm font-semibold text-ink-800">{formatBytes(used)} of {formatBytes(total)}</p>
         <div className="mt-3 flex items-center justify-center gap-3 text-xs font-bold">
-          <span className="inline-flex items-center gap-1 rounded-full bg-cream-100 px-2.5 py-1 text-ink-700"><Layers size={11} className="text-brand-grape" /> {counts.folders} folders</span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-cream-100 px-2.5 py-1 text-ink-700"><TrendingUp size={11} className="text-brand-sky" /> {counts.notes} notes</span>
+           <span className="inline-flex items-center gap-1 rounded-full bg-cream-100 px-2.5 py-1 text-ink-700"><Layers size={11} className="text-brand-grape" /> {counts.folder} folders</span>
+           <span className="inline-flex items-center gap-1 rounded-full bg-cream-100 px-2.5 py-1 text-ink-700"><TrendingUp size={11} className="text-brand-sky" /> {counts.note} notes</span>
         </div>
       </div>
 

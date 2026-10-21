@@ -233,13 +233,13 @@ const Profile = () => {
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="relative">
-              <img
-                src={avatarPreview || (user?.avatar ? avatarUrl(user.avatar) : '')}
-                alt="Avatar"
-                className="h-24 w-24 rounded-[2rem] object-cover border border-cream-200 bg-cream-100 shadow-warm-sm"
-                onError={() => setAvatarFailed(true)}
-                style={{ display: !avatarFailed && (avatarPreview || user?.avatar) ? 'block' : 'none' }}
-              />
+               <img
+                 src={avatarPreview || (user?.avatar ? avatarUrl(user.avatar) : '')}
+                 alt="Avatar"
+                 className="h-24 w-24 rounded-[2rem] object-cover border border-cream-200 bg-cream-100 shadow-warm-sm"
+                 onError={() => setAvatarFailed(true)}
+                 style={{ display: (avatarPreview || user?.avatar) ? 'block' : 'none' }}
+               />
               {(avatarFailed || (!user?.avatar && !avatarPreview)) && (
                 <div className="h-24 w-24 rounded-[2rem] flex items-center justify-center border-2 border-dashed border-cream-300 bg-cream-100 text-ink-400">
                   <User size={28} />
@@ -445,10 +445,8 @@ const Profile = () => {
                   type="button"
                   onClick={() => {
                     if (type === 'folder') {
-                      navigate('/folders');
-                    } else if (type === 'image' && item.filePath) {
-                      window.open(avatarUrl(item.filePath), '_blank', 'noopener,noreferrer');
-                    } else if (type === 'pdf' && item.filePath) {
+                      navigate(`/folder/${item._id}`);
+                    } else if (item.filePath) {
                       window.open(avatarUrl(item.filePath), '_blank', 'noopener,noreferrer');
                     } else {
                       navigate('/home');

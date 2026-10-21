@@ -88,7 +88,11 @@ const Header = ({
   };
 
   const openLock = () => {
-    setPw({ open: true, mode: hasLockPassword ? 'vault' : 'set', error: '', loading: false });
+    if (hasLockPassword) {
+      navigate('/locked-folder');
+    } else {
+      setPw({ open: true, mode: 'set', error: '', loading: false });
+    }
   };
 
   const openReset = (purpose) => {
@@ -183,16 +187,21 @@ const Header = ({
             <div className="flex shrink-0 items-center gap-2">
               {actions}
 
-              <motion.button
-                type="button"
-                whileHover={{ scale: 1.06 }}
-                whileTap={{ scale: 0.94 }}
-                onClick={openLock}
-                title={hasLockPassword ? 'Open private folder' : 'Create private folder'}
-                className="grid h-10 w-10 place-items-center rounded-2xl border border-cream-200 bg-white/80 text-ink-600 transition hover:border-brand-coral/40 hover:text-brand-coral"
-              >
-                {hasLockPassword ? <KeyRound size={17} /> : <Lock size={17} />}
-              </motion.button>
+                <motion.button
+                  type="button"
+                  whileHover={{ scale: 1.06 }}
+                  whileTap={{ scale: 0.94 }}
+                  onClick={openLock}
+                  title={hasLockPassword ? 'Open private folder' : 'Create private folder'}
+                  className={cx(
+                    'grid h-10 w-10 place-items-center rounded-2xl border transition',
+                    location.pathname === '/locked-folder' 
+                      ? 'hidden' 
+                      : 'border-cream-200 bg-white/80 text-ink-600 hover:border-brand-coral/40 hover:text-brand-coral'
+                  )}
+                >
+                  {hasLockPassword ? <KeyRound size={17} /> : <Lock size={17} />}
+                </motion.button>
 
               {/* Avatar — reflects the shared user state, so a new profile
                   picture shows up here the moment it is uploaded. */}

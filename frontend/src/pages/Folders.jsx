@@ -121,9 +121,9 @@ const Folders = () => {
                 className="group relative flex flex-col gap-3 rounded-[26px] border border-cream-200 bg-white/85 p-4 shadow-warm-xs transition-all hover:-translate-y-1 hover:border-cream-300 hover:shadow-warm-sm"
               >
                 <div className="flex items-center justify-between">
-                  <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br text-white shadow-sm" style={{ background: 'from-violet-400 to-purple-500' }}>
-                    <FolderOpen size={20} strokeWidth={2.2} />
-                  </div>
+                   <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-violet-400 to-purple-500 text-white shadow-sm">
+                     <FolderOpen size={20} strokeWidth={2.2} />
+                   </div>
                   <div className="flex gap-1.5">
                     <button type="button" onClick={() => { setConfirm({ open: true, item: folder }); }} className="p-1.5 rounded-full text-ink-400 hover:bg-rose-50 hover:text-rose-600 transition"><Trash2 size={16} /></button>
                     <button type="button" onClick={() => openLock(folder)} className="p-1.5 rounded-full text-ink-400 hover:bg-cream-100 hover:text-ink-900 transition" title={folder.isLocked ? 'Remove lock' : 'Lock folder'}>{folder.isLocked ? <Unlock size={16} /> : <Lock size={16} />}</button>

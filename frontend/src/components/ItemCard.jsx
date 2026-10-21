@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { forwardRef, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Heart,
@@ -23,7 +23,7 @@ import { cx, EASE, metaFor, formatBytes, formatDate, fileUrl, avatarUrl } from '
  * Props are unchanged from the original so every page keeps working, but the
  * handlers should now be real (pass `actions` from useItemActions).
  */
-const ItemCard = ({
+const ItemCard = forwardRef(({
   item,
   onFavorite,
   onCopy,
@@ -35,7 +35,7 @@ const ItemCard = ({
   onSecure,
   onClick,
   index = 0,
-}) => {
+}, ref) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [thumbError, setThumbError] = useState(false);
   const wrapRef = useRef(null);
@@ -81,21 +81,25 @@ const ItemCard = ({
   };
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.96 }}
-      transition={{ duration: 0.4, delay: Math.min(index * 0.04, 0.32), ease: EASE }}
-      ref={wrapRef}
-      role="button"
-      tabIndex={0}
-      onClick={() => onClick?.(item)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') onClick?.(item);
-      }}
-      className="group w-full cursor-pointer rounded-3xl border border-cream-200 bg-white/85 p-3.5 shadow-warm-xs backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-cream-300 hover:bg-white hover:shadow-warm-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-grape/40 relative z-10"
-    >
+      <motion.div
+        ref={ref}
+        layout
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96 }}
+        transition={{ duration: 0.4, delay: Math.min(index * 0.04, 0.32), ease: EASE }}
+        ref={wrapRef}
+        role="button"
+        tabIndex={0}
+        onClick={() => onClick?.(item)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') onClick?.(item);
+        }}
+        className={cx(
+          "group w-full cursor-pointer rounded-3xl border border-cream-200 bg-white/85 p-3.5 shadow-warm-xs backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-cream-300 hover:bg-white hover:shadow-warm-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-grape/40 relative",
+          menuOpen ? "z-50" : "z-10"
+        )}
+      >
       <div className="flex items-center gap-3.5">
         {item.type === 'image' && item.filePath && !thumbError ? (
           <motion.span
@@ -254,6 +258,6 @@ const ItemCard = ({
       )}
     </motion.div>
   );
-};
+});
 
 export default ItemCard;

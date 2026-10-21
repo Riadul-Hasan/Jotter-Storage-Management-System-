@@ -268,86 +268,101 @@ const Signup = () => {
 
   return (
     // Added overflow-y-auto to ensure button is reachable on all mobile screens
-    <div ref={containerRef} className="relative min-h-screen w-full flex items-center justify-center bg-[#fffbf2] overflow-x-hidden overflow-y-auto p-4 sm:p-10 selection:bg-orange-100">
+    <div ref={containerRef} className="relative min-h-screen w-full flex items-center justify-center bg-[#fffbf7] overflow-x-hidden overflow-y-auto p-4 sm:p-10 selection:bg-brand-coral/20">
       
       {/* --- BACKGROUND LAYER --- */}
       <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className="bg-aura absolute -top-[10%] -left-[10%] w-[70%] h-[70%] bg-orange-200/40 rounded-full blur-[120px]" />
-        <div className="bg-aura absolute -bottom-[10%] -right-[10%] w-[60%] h-[60%] bg-rose-200/30 rounded-full blur-[100px]" />
+        <div className="bg-aura absolute -top-[10%] -left-[10%] w-[70%] h-[70%] bg-brand-coral/20 rounded-full blur-[120px]" />
+        <div className="bg-aura absolute -bottom-[10%] -right-[10%] w-[60%] h-[60%] bg-brand-tangerine/20 rounded-full blur-[100px]" />
+        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03] pointer-events-none" />
       </div>
 
       <div className="relative z-10 w-full max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-12">
         
         {/* --- BRANDING SECTION --- */}
         <div ref={brandingRef} className="w-full lg:w-1/2 text-center lg:text-left opacity-0">
-          <div className="reveal-node inline-flex items-center gap-2 bg-orange-100/50 border border-orange-200 px-4 py-2 rounded-full mb-6 lg:mb-10 shadow-sm">
-            <HiOutlineSparkles className="text-orange-600 animate-pulse" />
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-orange-900/60 font-sans">Legacy System V2</span>
+          <div className="reveal-node inline-flex items-center gap-2 bg-white/80 backdrop-blur-sm border border-brand-coral/25 px-4 py-1.5 rounded-full mb-6 lg:mb-10 shadow-sm">
+            <HiOutlineSparkles className="text-brand-coral animate-pulse" />
+            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-brand-coral/80 font-sans">Legacy System V2</span>
           </div>
 
-          <h1 className="reveal-node text-5xl sm:text-6xl lg:text-8xl font-black text-slate-900 leading-[1.05] tracking-tighter mb-6 lg:mb-10">
+          <h1 className="reveal-node text-5xl sm:text-6xl lg:text-8xl font-display font-black text-ink-900 leading-[1.05] tracking-tighter mb-6 lg:mb-10">
             Define your <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-rose-500 italic font-serif py-2">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-coral via-brand-tangerine to-brand-sun italic font-serif py-2">
               Digital Legacy.
             </span>
           </h1>
-          <p className="reveal-node text-lg sm:text-xl text-slate-600/80 max-w-md mx-auto lg:mx-0 font-light leading-relaxed">
+          <p className="reveal-node text-lg sm:text-xl text-ink-500 max-w-md mx-auto lg:mx-0 font-medium leading-relaxed">
             Your secure sanctuary for thoughts and files. Experience storage that feels like art.
           </p>
         </div>
 
         {/* --- SIGNUP CARD --- */}
         <div ref={cardRef} className="w-full max-w-[500px] mb-10 lg:mb-0 opacity-0">
-          <div className="relative bg-white/70 backdrop-blur-3xl border border-white rounded-[2.5rem] sm:rounded-[3.5rem] p-8 sm:p-14 shadow-[0_32px_100px_-20px_rgba(180,83,9,0.15)]">
+          <div className="relative bg-white/70 backdrop-blur-2xl border border-white rounded-[3rem] sm:rounded-[3.5rem] p-8 sm:p-14 shadow-warm-xl group overflow-hidden">
+            {/* Decorative accent for the card */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-coral/5 rounded-full blur-3xl -mr-16 -mt-16 transition-all group-hover:bg-brand-coral/10" />
             
-            <div className="reveal-node mb-10">
-              <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Create Account</h2>
-              <p className="text-slate-500 mt-2 font-medium">Initialize your private storage node</p>
+            <div className="reveal-node mb-10 relative">
+              <h2 className="text-3xl font-display font-bold text-ink-900 tracking-tight">Create Account</h2>
+              <div className="h-1.5 w-12 bg-gradient-to-r from-brand-coral to-brand-tangerine rounded-full mt-3" />
+              <p className="text-ink-500 mt-4 font-medium">Initialize your private storage node</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="reveal-node space-y-4">
                 {/* Inputs */}
                 {['username', 'email'].map((field) => (
-                  <div key={field} className="group relative">
-                    {field === 'username' ? <HiUser className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors z-20" /> 
-                    : <HiMail className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors z-20" />}
-                    <input
-                      type={field === 'email' ? 'email' : 'text'}
-                      name={field}
-                      required
-                      value={formData[field]}
-                      onChange={handleChange}
-                      placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
-                      className="w-full bg-white/60 border border-orange-100 rounded-2xl py-4 pl-14 pr-6 text-slate-900 outline-none focus:bg-white focus:border-orange-400 focus:ring-4 focus:ring-orange-500/5 transition-all duration-300 shadow-sm"
-                    />
+                  <div key={field} className="group relative space-y-2">
+                    <label className="text-[11px] font-bold text-ink-400 uppercase tracking-widest ml-1">
+                      {field === 'username' ? 'Username' : 'Email Address'}
+                    </label>
+                    <div className="relative">
+                      {field === 'username' ? <HiUser className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-400 group-focus-within:text-brand-coral transition-colors z-20 text-xl" /> 
+                      : <HiMail className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-400 group-focus-within:text-brand-coral transition-colors z-20 text-xl" />}
+                      <input
+                        type={field === 'email' ? 'email' : 'text'}
+                        name={field}
+                        required
+                        value={formData[field]}
+                        onChange={handleChange}
+                        placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
+                        className="w-full bg-white/50 border border-cream-200 rounded-2xl py-4 pl-12 pr-6 text-ink-900 outline-none focus:bg-white focus:border-brand-coral focus:ring-4 focus:ring-brand-coral/10 transition-all duration-300 shadow-sm placeholder:text-ink-400"
+                      />
+                    </div>
                   </div>
                 ))}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="group relative">
-                    <HiLockClosed className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors z-20" />
-                    <input
-                      type="password"
-                      name="password"
-                      required
-                      value={formData.password}
-                      onChange={handleChange}
-                      placeholder="Cipher"
-                      className="w-full bg-white/60 border border-orange-100 rounded-2xl py-4 pl-14 pr-6 text-slate-900 outline-none focus:bg-white focus:border-orange-400 transition-all shadow-sm"
-                    />
+                  <div className="group relative space-y-2">
+                    <label className="text-[11px] font-bold text-ink-400 uppercase tracking-widest ml-1">Cipher</label>
+                    <div className="relative">
+                      <HiLockClosed className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-400 group-focus-within:text-brand-coral transition-colors z-20 text-xl" />
+                      <input
+                        type="password"
+                        name="password"
+                        required
+                        value={formData.password}
+                        onChange={handleChange}
+                        placeholder="••••••••"
+                        className="w-full bg-white/50 border border-cream-200 rounded-2xl py-4 pl-12 pr-6 text-ink-900 outline-none focus:bg-white focus:border-brand-coral focus:ring-4 focus:ring-brand-coral/10 transition-all duration-300 shadow-sm placeholder:text-ink-400"
+                      />
+                    </div>
                   </div>
-                  <div className="group relative">
-                    <HiCheckCircle className={`absolute left-5 top-1/2 -translate-y-1/2 z-20 transition-colors ${formData.password && formData.password === formData.confirmPassword ? 'text-emerald-500' : 'text-slate-300'}`} />
-                    <input
-                      type="password"
-                      name="confirmPassword"
-                      required
-                      value={formData.confirmPassword}
-                      onChange={handleChange}
-                      placeholder="Verify"
-                      className="w-full bg-white/60 border border-orange-100 rounded-2xl py-4 pl-14 pr-6 text-slate-900 outline-none focus:bg-white focus:border-orange-400 transition-all shadow-sm"
-                    />
+                  <div className="group relative space-y-2">
+                    <label className="text-[11px] font-bold text-ink-400 uppercase tracking-widest ml-1">Verify</label>
+                    <div className="relative">
+                      <HiCheckCircle className={`absolute left-4 top-1/2 -translate-y-1/2 z-20 transition-colors text-xl ${formData.password && formData.password === formData.confirmPassword ? 'text-brand-mint' : 'text-ink-400'}`} />
+                      <input
+                        type="password"
+                        name="confirmPassword"
+                        required
+                        value={formData.confirmPassword}
+                        onChange={handleChange}
+                        placeholder="••••••••"
+                        className="w-full bg-white/50 border border-cream-200 rounded-2xl py-4 pl-12 pr-6 text-ink-900 outline-none focus:bg-white focus:border-brand-coral focus:ring-4 focus:ring-brand-coral/10 transition-all duration-300 shadow-sm placeholder:text-ink-400"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -360,49 +375,49 @@ const Signup = () => {
                   name="agreeTerms"
                   checked={formData.agreeTerms}
                   onChange={handleChange}
-                  className="w-6 h-6 rounded-lg border-orange-200 text-orange-600 focus:ring-orange-500 cursor-pointer"
+                  className="w-6 h-6 rounded-lg border-cream-300 text-brand-coral focus:ring-brand-coral/50 cursor-pointer"
                 />
-                <label htmlFor="agreeTerms" className="text-xs text-slate-500 font-medium">
-                  I accept the <Link to="/terms" className="text-orange-600 font-bold hover:text-orange-700 transition-colors">Storage Covenant</Link>
+                <label htmlFor="agreeTerms" className="text-xs text-ink-500 font-medium">
+                  I accept the <Link to="/terms" className="text-brand-coral font-bold hover:text-brand-tangerine transition-colors">Storage Covenant</Link>
                 </label>
               </div>
 
-              {/* --- THE BUTTON (Ensured Visibility) --- */}
+              {/* --- THE BUTTON --- */}
               <button
                 disabled={loading}
                 type="submit"
-                className="reveal-node relative isolate w-full group overflow-hidden h-[72px] bg-slate-900 rounded-2xl shadow-xl shadow-orange-900/10 active:scale-[0.97] transition-all duration-300 disabled:opacity-50"
+                className="reveal-node relative isolate w-full group overflow-hidden h-[64px] bg-ink-900 rounded-2xl shadow-lg shadow-ink-900/20 active:scale-[0.98] transition-all duration-300 disabled:opacity-50"
               >
                 {/* Background Hover Gradient */}
-                <div className="absolute inset-0 z-0 bg-gradient-to-r from-orange-600 to-rose-500 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <div className="absolute inset-0 z-0 bg-gradient-to-r from-brand-coral via-brand-tangerine to-brand-sun opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 
-                {/* Content with high z-index */}
-                <div className="relative z-10 flex items-center justify-center gap-3 font-bold text-white tracking-widest text-sm uppercase">
+                {/* Content */}
+                <div className="relative z-10 flex items-center justify-center gap-3 font-bold text-white tracking-wide text-sm uppercase">
                   {loading ? (
-                    <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   ) : (
                     <>
                       <span>Create Account</span>
-                      <HiArrowRight className="text-xl group-hover:translate-x-2 transition-transform duration-300" />
+                      <HiArrowRight className="text-xl group-hover:translate-x-1 transition-transform duration-300" />
                     </>
                   )}
                 </div>
               </button>
             </form>
 
-            <div className="reveal-node mt-10 pt-8 border-t border-orange-50 text-center">
-              <p className="text-slate-500 text-sm font-medium">
+            <div className="reveal-node mt-10 pt-8 border-t border-cream-100 text-center">
+              <p className="text-ink-400 text-sm font-medium">
                 Already part of the collective?{' '}
-                <Link to="/login" className="text-orange-600 font-black hover:text-rose-600 transition-colors underline decoration-2 underline-offset-8 decoration-orange-200">
+                <Link to="/login" className="text-brand-coral font-bold hover:text-brand-tangerine transition-colors underline underline-offset-4 decoration-2">
                   Sign In
                 </Link>
               </p>
             </div>
           </div>
 
-          <div className="reveal-node flex items-center justify-center gap-6 mt-12 opacity-30">
-            <HiShieldCheck className="text-orange-600 text-xl" />
-            <span className="text-[10px] text-slate-900 font-black uppercase tracking-[0.4em]">End-to-End Encrypted Node</span>
+          <div className="reveal-node flex items-center justify-center gap-3 mt-8 opacity-60">
+            <HiShieldCheck className="text-brand-coral text-xl" />
+            <span className="text-[10px] text-ink-500 font-bold uppercase tracking-[0.2em]">End-to-End Encrypted Node</span>
           </div>
         </div>
       </div>

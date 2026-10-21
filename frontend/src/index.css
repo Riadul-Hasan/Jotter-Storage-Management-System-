@@ -233,3 +233,240 @@
     animation-delay: 500ms;
   }
 }
+
+/* =====================================================================
+   TOAST NOTIFICATIONS  (react-toastify v9 — warm Jotter theme)
+   These rules must stay in index.css so they load AFTER
+   react-toastify/dist/ReactToastify.css (imported in App.jsx) and win
+   the cascade at equal specificity.
+   ===================================================================== */
+.Toastify__toast-container {
+  --toastify-toast-width: 360px;
+}
+
+.Toastify__toast {
+  position: relative;
+  align-items: stretch;
+  gap: 0;
+  min-height: 68px;
+  margin-bottom: 0.875rem;
+  padding: 0.875rem 0.875rem 0.875rem 1.125rem;
+  overflow: hidden;
+  border: 1px solid var(--toast-accent-border, #F3E9DA);
+  border-radius: 1rem;
+  background: #FFFDF8;
+  box-shadow: 0 6px 16px rgba(96, 76, 46, 0.08), 0 14px 34px rgba(96, 76, 46, 0.09);
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: #3B3125;
+  cursor: default;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.Toastify__toast:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(96, 76, 46, 0.1), 0 18px 40px rgba(96, 76, 46, 0.11);
+}
+
+/* Colored left accent bar for each type */
+.Toastify__toast::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--toast-accent, #8B5CF6);
+}
+
+.Toastify__toast--success {
+  --toast-accent: #12B886;
+  --toast-accent-border: rgba(18, 184, 134, 0.28);
+  --toast-tint: rgba(18, 184, 134, 0.12);
+}
+
+.Toastify__toast--error {
+  --toast-accent: #F43F5E;
+  --toast-accent-border: rgba(244, 63, 94, 0.28);
+  --toast-tint: rgba(244, 63, 94, 0.12);
+}
+
+.Toastify__toast--warning {
+  --toast-accent: #FF9F1C;
+  --toast-accent-border: rgba(255, 159, 28, 0.32);
+  --toast-tint: rgba(255, 159, 28, 0.14);
+}
+
+.Toastify__toast--info {
+  --toast-accent: #3BA3FF;
+  --toast-accent-border: rgba(59, 163, 255, 0.28);
+  --toast-tint: rgba(59, 163, 255, 0.12);
+}
+
+.Toastify__toast--default {
+  --toast-accent: #8B5CF6;
+  --toast-accent-border: rgba(139, 92, 246, 0.28);
+  --toast-tint: rgba(139, 92, 246, 0.12);
+}
+
+.Toastify__toast-body {
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0;
+  margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.Toastify__toast-body > div:last-child {
+  flex: 1;
+  min-width: 0;
+  color: #3B3125;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  word-break: break-word;
+}
+
+/* Icon sits in a soft tinted chip */
+.Toastify__toast-icon {
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 auto;
+  margin-inline-end: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 0.75rem;
+  background: var(--toast-tint, rgba(139, 92, 246, 0.12));
+}
+
+.Toastify__toast-icon svg {
+  width: 1.125rem;
+  height: 1.125rem;
+  fill: var(--toast-accent, #8B5CF6);
+}
+
+/* Close button — visible against the paper background */
+.Toastify__close-button {
+  align-self: flex-start;
+  margin-inline-start: 0.5rem;
+  padding: 0.125rem;
+  border: none;
+  background: transparent;
+  color: #BCB0A0;
+  opacity: 1;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.Toastify__close-button:hover {
+  color: #2A2117;
+}
+
+.Toastify__close-button svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.Toastify__progress-bar {
+  background: var(--toast-accent, #8B5CF6);
+}
+
+/* Smooth slide-in (overrides react-toastify's default "bounce" enter).
+   The bounce wrapper adds e.g. `Toastify--animate Toastify__bounce-enter
+   Toastify__bounce-enter--top-right` to the toast, then removes them on
+   animationend — so overriding the per-position enter class is enough. */
+.Toastify__bounce-enter,
+.Toastify__bounce-exit {
+  animation-duration: 0.38s;
+  animation-fill-mode: both;
+}
+
+.Toastify__bounce-enter--top-right,
+.Toastify__bounce-enter--bottom-right {
+  animation-name: jotterSlideInRight;
+}
+
+.Toastify__bounce-enter--top-left,
+.Toastify__bounce-enter--bottom-left {
+  animation-name: jotterSlideInLeft;
+}
+
+.Toastify__bounce-enter--top-center {
+  animation-name: jotterSlideInDown;
+}
+
+.Toastify__bounce-enter--bottom-center {
+  animation-name: jotterSlideInUp;
+}
+
+@keyframes jotterSlideInRight {
+  0% {
+    transform: translate3d(115%, 0, 0);
+    opacity: 0;
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes jotterSlideInLeft {
+  0% {
+    transform: translate3d(-115%, 0, 0);
+    opacity: 0;
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes jotterSlideInDown {
+  0% {
+    transform: translate3d(0, -115%, 0);
+    opacity: 0;
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes jotterSlideInUp {
+  0% {
+    transform: translate3d(0, 115%, 0);
+    opacity: 0;
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .Toastify__toast-container {
+    --toastify-toast-width: auto;
+  }
+
+  .Toastify__toast-container--top-right,
+  .Toastify__toast-container--bottom-right {
+    right: 0.75rem;
+    left: 0.75rem;
+    width: auto;
+  }
+
+  .Toastify__toast {
+    margin-bottom: 0.625rem;
+  }
+}

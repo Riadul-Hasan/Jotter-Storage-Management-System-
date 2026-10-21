@@ -385,18 +385,7 @@ export const PasswordDialog = ({
                    </button>
                  </p>
                )}
-               {mode === 'verify' && (
-                 <p className="text-center text-[12.5px] text-ink-500 mt-2">
-                   Forgotten vault password?{' '}
-                   <button
-                     type="button"
-                     onClick={onForgot}
-                     className="font-bold text-brand-grape underline-offset-2 hover:underline"
-                   >
-                     Reset it
-                   </button>
-                 </p>
-               )}
+               
 
         </div>
         <Foot>
