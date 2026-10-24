@@ -6,6 +6,7 @@ import { User, Lock, Bell, Palette, Shield, Trash2, LogOut, ArrowRight, Mail, Ph
 import PageShell from '../components/PageShell';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { cx } from '../utils/format';
 
 const SETTINGS = [
@@ -14,7 +15,7 @@ const SETTINGS = [
   { key: 'reset-account', icon: KeyRound, label: 'Reset account password', desc: 'Forgot your login password? Reset via email', accent: 'from-brand-rose to-pink-500' },
   { key: 'reset-vault', icon: ShieldCheck, label: 'Reset vault password', desc: 'Forgot your vault password? Reset via email', accent: 'from-brand-mint to-emerald-500' },
   { key: 'notifications', icon: Bell, label: 'Notifications', desc: 'Get alerts about your items', accent: 'from-brand-sun to-amber-500' },
-  { key: 'appearance', icon: Palette, label: 'Appearance', desc: 'Warm light theme and colours', accent: 'from-brand-grape to-purple-500' },
+  { key: 'appearance', icon: Palette, label: 'Appearance', desc: 'Choose a light or dark theme', accent: 'from-brand-grape to-purple-500' },
   { key: 'privacy', icon: Shield, label: 'Data & privacy', desc: 'Manage your data and vault', accent: 'from-brand-mint to-emerald-500' },
   { key: 'delete', icon: Trash2, label: 'Delete account', desc: 'Remove your account and data', accent: 'from-red-500 to-rose-600', danger: true },
 ];
@@ -22,6 +23,7 @@ const SETTINGS = [
 const Settings = () => {
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const { theme, setTheme } = useTheme();
   const [active, setActive] = useState(null);
   const [resetOpen, setResetOpen] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
@@ -65,7 +67,7 @@ const Settings = () => {
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="max-w-2xl"
+        className="mx-auto w-full max-w-2xl"
       >
         <div className="grid gap-3">
           {SETTINGS.map((s) => {
@@ -87,7 +89,7 @@ const Settings = () => {
                   setActive(s.key);
                 }}
               >
-                <div className={cx('grid h-10 w-10 shrink-0 place-items-center rounded-xl text-white shadow-sm', isActive ? s.accent : 'from-brand-coral to-brand-tangerine')}>
+                <div className={cx('grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br text-white shadow-sm', isActive ? s.accent : 'from-brand-coral to-brand-tangerine')}>
                   <s.icon size={17} strokeWidth={2.2} />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -100,6 +102,40 @@ const Settings = () => {
             );
           })}
         </div>
+
+        {active === 'appearance' && (
+          <motion.section
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            aria-label="Appearance theme"
+            className="mt-5 rounded-[22px] border border-cream-200 bg-white/85 p-5 shadow-warm-xs"
+          >
+            <h3 className="font-bold text-ink-900">Choose your theme</h3>
+            <p className="mt-1 text-sm text-ink-500">Your choice applies across Jotter and is saved on this device.</p>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              {[
+                { value: 'light', label: 'Light' },
+                { value: 'dark', label: 'Dark' },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  aria-pressed={theme === option.value}
+                  onClick={() => setTheme(option.value)}
+                  className={cx(
+                    'rounded-xl border px-4 py-3 text-sm font-bold transition-colors',
+                    theme === option.value
+                      ? 'border-brand-grape bg-brand-grape/10 text-brand-grape'
+                      : 'border-cream-200 bg-white text-ink-700 hover:border-brand-grape/40'
+                  )}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </motion.section>
+        )}
 
         {active === 'delete' && (
           <motion.div

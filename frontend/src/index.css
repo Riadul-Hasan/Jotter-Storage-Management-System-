@@ -470,3 +470,121 @@
     margin-bottom: 0.625rem;
   }
 }
+
+html[data-theme='dark'] body {
+  background: #111827;
+  color: #f3f4f6;
+}
+
+.App[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+.App[data-theme='dark'] [class*='bg-cream-'],
+.App[data-theme='dark'] [class~='bg-white'],
+.App[data-theme='dark'] [class~='bg-white/50'],
+.App[data-theme='dark'] [class~='bg-white/60'],
+.App[data-theme='dark'] [class~='bg-white/70'],
+.App[data-theme='dark'] [class~='bg-white/75'],
+.App[data-theme='dark'] [class~='bg-white/80'],
+.App[data-theme='dark'] [class~='bg-white/85'],
+.App[data-theme='dark'] [class*='bg-white/9'],
+.App[data-theme='dark'] [class~='bg-white/100'],
+.App[data-theme='dark'] [class~='bg-[#fff7f2]'],
+.App[data-theme='dark'] [class~='bg-[#fffbf7]'],
+.App[data-theme='dark'] [class~='bg-[#fbfcfb]'] {
+  background-color: #1f2937 !important;
+}
+
+.App[data-theme='dark'] [class~='bg-white/5'],
+.App[data-theme='dark'] [class~='bg-white/10'],
+.App[data-theme='dark'] [class~='bg-white/15'],
+.App[data-theme='dark'] [class~='bg-white/20'],
+.App[data-theme='dark'] [class~='bg-white/25'],
+.App[data-theme='dark'] [class~='bg-white/30'],
+.App[data-theme='dark'] [class~='bg-white/40'] {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.App[data-theme='dark'] [class*='border-cream-'] {
+  border-color: #374151 !important;
+}
+
+.App[data-theme='dark'] [class~='text-ink-900'],
+.App[data-theme='dark'] [class~='text-ink-800'] {
+  color: #f9fafb !important;
+}
+
+.App[data-theme='dark'] [class~='text-ink-700'],
+.App[data-theme='dark'] [class~='text-ink-600'] {
+  color: #d1d5db !important;
+}
+
+.App[data-theme='dark'] [class~='text-ink-500'],
+.App[data-theme='dark'] [class~='text-ink-400'],
+.App[data-theme='dark'] [class~='text-ink-300'] {
+  color: #9ca3af !important;
+}
+
+.App[data-theme='dark'] [class*='from-cream-'] {
+  --tw-gradient-from: #1f2937 var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: rgb(31 41 55 / 0) var(--tw-gradient-to-position) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+.App[data-theme='dark'] [class*='to-cream-'] {
+  --tw-gradient-to: #1f2937 var(--tw-gradient-to-position) !important;
+}
+
+.App[data-theme='dark'] .w-card,
+.App[data-theme='dark'] .w-panel,
+.App[data-theme='dark'] .w-chip {
+  border-color: #374151;
+  background-color: #1f2937;
+  color: #f3f4f6;
+}
+
+.App[data-theme='dark'] .w-eyebrow {
+  border-color: #4b5563;
+  background-color: #374151;
+  color: #d1d5db;
+}
+
+.App[data-theme='dark'] .w-title {
+  color: #f9fafb;
+}
+
+.App[data-theme='dark'] .w-sub,
+.App[data-theme='dark'] .w-label {
+  color: #9ca3af;
+}
+
+.App[data-theme='dark'] .w-field {
+  border-color: #4b5563;
+  background-color: #111827;
+  color: #f3f4f6;
+}
+
+.App[data-theme='dark'] .w-btn-soft {
+  border-color: #4b5563;
+  background-color: #374151;
+  color: #e5e7eb;
+}
+
+.App[data-theme='dark'] .w-skeleton {
+  background-image: linear-gradient(to right, #1f2937, #374151, #1f2937);
+}
+
+html[data-theme='dark'] .Toastify__toast {
+  border-color: #374151;
+  background: #1f2937;
+  color: #f3f4f6;
+}
+
+html[data-theme='dark'] .Toastify__toast-body > div:last-child {
+  color: #f3f4f6;
+}
+
+html[data-theme='dark'] .Toastify__close-button:hover {
+  color: #f9fafb;
+}

@@ -3,6 +3,7 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
 import Landing from './pages/Landing';
 import Signup from './pages/Signup';
 import Login from './pages/Login';
@@ -25,11 +26,12 @@ import Terms from './pages/Terms';
 import LockedFolder from './pages/LockedFolder';
 import AllItems from './pages/AllItems';
 
-function App() {
+function AppContent() {
+  const { theme } = useTheme();
+
   return (
-    <Router>
       <AuthProvider>
-      <div className="App">
+      <div className="App" data-theme={theme}>
         <Routes>
 
           <Route path="/" element={<Landing />} />
@@ -174,10 +176,19 @@ function App() {
           pauseOnFocusLoss
           draggable
           pauseOnHover
-          theme="light"
+          theme={theme}
         />
       </div>
       </AuthProvider>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
     </Router>
   );
 }
